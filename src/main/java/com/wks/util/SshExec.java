@@ -8,4 +8,8 @@ public class SshExec {
 
 		System.out.println("TEST" + jSch);
 	}
+
+	public SshExec(ConnectionInformation ci, String smd){
+
+	}
 }
