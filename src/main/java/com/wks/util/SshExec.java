@@ -9,7 +9,13 @@ public class SshExec {
 		System.out.println("TEST" + jSch);
 	}
 
-	public SshExec(ConnectionInformation ci, String smd){
+	private final ConnectionInformation ci;
+	private final String cmd;
+	private boolean executed;
 
+	public SshExec(ConnectionInformation ci, String cmd){
+		this.ci = ci;
+		this.cmd = cmd;
+		executed = false;
 	}
 }
