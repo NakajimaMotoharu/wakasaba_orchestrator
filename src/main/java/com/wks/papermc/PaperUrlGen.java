@@ -27,4 +27,17 @@ public class PaperUrlGen {
 
 		return url.toString().replace("\"", "");
 	}
+
+	public static String getPaperMcSha256(String json){
+
+		ObjectMapper om = new ObjectMapper();
+		JsonNode src = om.readTree(json);
+		JsonNode downloadInfo = src.get(0).get("downloads");
+		JsonNode serverInfo = downloadInfo.get("server:default");
+		JsonNode checkSums = serverInfo.get("checksums");
+		JsonNode sha256 = checkSums.get("sha256");
+
+		return sha256.toString().replace("\"", "");
+
+	}
 }
