@@ -6,17 +6,20 @@ import tools.jackson.databind.ObjectMapper;
 import java.util.List;
 
 public class PaperUrlGen {
+	/** PaperMCの最新バージョンを取得するルーチン */
 	public static String getPaperMcVersion(String json){
 
 		ObjectMapper om = new ObjectMapper();
 		JsonNode src = om.readTree(json);
 		JsonNode majorVersion = src.get("versions");
+		// メジャーバージョンの中身がコレクションのため、一度リストに変換してから先頭を取得
 		JsonNode fullVersion = majorVersion.get(List.copyOf(majorVersion.propertyNames()).getFirst());
 
 		return fullVersion.get(0).toString().replace("\"", "");
 
 	}
 
+	/** PaperMCの最新バージョンのURLを取得するルーチン */
 	public static String getPaperMcUrl(String json){
 
 		ObjectMapper om = new ObjectMapper();
@@ -28,6 +31,7 @@ public class PaperUrlGen {
 		return url.toString().replace("\"", "");
 	}
 
+	/** PaperMCの最新バージョンのURLのSHA-256を取得するルーチン */
 	public static String getPaperMcSha256(String json){
 
 		ObjectMapper om = new ObjectMapper();
