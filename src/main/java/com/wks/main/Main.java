@@ -1,8 +1,6 @@
 package com.wks.main;
 
 import com.jcraft.jsch.JSchException;
-import com.wks.cmd.SshCommand;
-import com.wks.util.ConnectionInformation;
 import com.wks.workflow.WksWorkFlow;
 
 import java.io.FileNotFoundException;

@@ -45,12 +45,78 @@ public class SshCommand {
 
 		// wgetコマンド構成
 		String cmd = "wget " +
-				"-O /home/mini/mcs/prod/paper.jar " +
+				"-O /home/mini/download/paper.jar " +
 				"--user-agent=\"" + userAgent + "\" " +
 				url;
 
 		// コマンド実行
 		runCommand(ci, cmd);
+	}
+
+	/** PaperMCクライアントの検証と移動 */
+	public static void movePaperMc(ConnectionInformation ci) throws IOException, InterruptedException, JSchException {
+		// ユーザエージェントの設定
+		String userAgent = "wakasaba_orchestrator/1.0";
+
+		// 最新バージョンの取得
+		String versionJson = Curl.exec(userAgent, "https://fill.papermc.io/v3/projects/paper");
+		String version = PaperUrlGen.getPaperMcVersion(versionJson);
+
+		// 最新バージョンのサーバクライアントのSHA256取得
+		String sha256Json = Curl.exec(userAgent, "https://fill.papermc.io/v3/projects/paper/versions/" + version + "/builds");
+		String expectedSHA256 = PaperUrlGen.getPaperMcSha256(sha256Json);
+
+		// Active待機
+		waitForBecomeActive(ci);
+
+		// コマンド記述
+		String cmd = "sha256sum download/paper.jar";
+		SshExec sshExec = new SshExec(ci, cmd);
+
+		// コマンド実行
+		String[] ret = sshExec.execute();
+
+		// 実行コマンドをlogに出力
+		log.add("& " + cmd);
+
+		// 返り値をログに追加
+		log.addAll(Arrays.asList(ret));
+
+		// SHA256検証(正常ファイルならファイルコピー実行)
+		if (ret[0].substring(0, 64).equals(expectedSHA256)){
+			// Active待機
+			waitForBecomeActive(ci);
+
+			// コマンド記述
+			cmd = "rm /home/mini/mcs/prod/paper.jar";
+			sshExec = new SshExec(ci, cmd);
+
+			// コマンド実行
+			ret = sshExec.execute();
+
+			// 実行コマンドをlogに出力
+			log.add("& " + cmd);
+
+			// 返り値をログに追加
+			log.addAll(Arrays.asList(ret));
+
+			// Active待機
+			waitForBecomeActive(ci);
+
+			// コマンド記述
+			cmd = "mv /home/mini/download/paper.jar /home/mini/mcs/prod/paper.jar";
+			sshExec = new SshExec(ci, cmd);
+
+			// コマンド実行
+			ret = sshExec.execute();
+
+			// 実行コマンドをlogに出力
+			log.add("& " + cmd);
+
+			// 返り値をログに追加
+			log.addAll(Arrays.asList(ret));
+		}
+
 	}
 
 	/** PaperMC起動コマンドの実行 */
