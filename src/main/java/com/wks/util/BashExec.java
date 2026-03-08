@@ -24,14 +24,19 @@ public class BashExec {
 
 	/** shutdownコマンドの実行 */
 	public static void shutdown() throws IOException {
+		String shutdownCmd = "(sleep 60 && sudo shutdown -r now) &";
+
 		// 10秒待機+シャットダウンのコマンドを実行
-		String[] cmd = new String[]{"sh", "-c", "(sleep 60 && sudo shutdown -r now) &"};
+		String[] cmd = new String[]{"sh", "-c", shutdownCmd};
 
 		// ProcessBuilderを指定のコマンドで作成
 		ProcessBuilder processBuilder = new ProcessBuilder(cmd);
 
 		// プロセス実行
 		processBuilder.start();
+
+		// logファイルにコマンド追記
+		log.add("$ " + shutdownCmd);
 
 		//出力を無視して終了
 	}
@@ -49,6 +54,9 @@ public class BashExec {
 		// プロセス出力を受け取るBufferedReaderを作成
 		InputStreamReader inputStreamReader = new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8);
 		BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+
+		// 実行コマンドをログに追加
+		log.add("$ " + cmd);
 
 		// 出力を1行ずつlogに追加
 		while (true){

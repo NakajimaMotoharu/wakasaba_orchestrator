@@ -64,6 +64,9 @@ public class SshCommand {
 		// コマンド実行
 		String[] ret = sshExec.execute();
 
+		// 実行コマンドをlogに出力
+		log.add("& " + cmd);
+
 		// 返り値をログに追加
 		log.addAll(Arrays.asList(ret));
 	}
