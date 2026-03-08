@@ -47,7 +47,7 @@ public class SshCommand {
 		String cmd = "wget " +
 				"-O download/paper.jar " +
 				"--user-agent=\"" + userAgent + "\" " +
-				"url";
+				url;
 
 		// コマンド実行
 		runCommand(ci, cmd);
