@@ -24,9 +24,10 @@ public class BashExec {
 
 	/** shutdownコマンドの実行 */
 	public static void shutdown() throws IOException {
+		// 60秒待機+シャットダウンのコマンドを作成
 		String shutdownCmd = "(sleep 60 && sudo shutdown -r now) &";
 
-		// 10秒待機+シャットダウンのコマンドを実行
+		// コマンドを実行
 		String[] cmd = new String[]{"sh", "-c", shutdownCmd};
 
 		// ProcessBuilderを指定のコマンドで作成
