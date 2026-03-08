@@ -1,4 +1,4 @@
-#!bin/shell
+#!/bin/shell
 
 # pull
 git pull
