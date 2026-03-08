@@ -129,6 +129,11 @@ public class SshCommand {
 		runCommand(ci, "sudo systemctl stop papermc");
 	}
 
+	/** PaperMCバックアップシェルの実行 */
+	public static void backupPaperMC(ConnectionInformation ci) throws JSchException, InterruptedException, IOException {
+		runCommand(ci, "sh /home/mini/mcs/shell/backup.sh");
+	}
+
 	/** 任意のコマンド実行 */
 	private static void runCommand(ConnectionInformation ci, String cmd) throws JSchException, InterruptedException, IOException {
 		// Active待機

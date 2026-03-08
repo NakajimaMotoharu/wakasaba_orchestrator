@@ -27,6 +27,7 @@ public class WksWorkFlow {
 		SshCommand.stopPaperMC(ci2);
 		SshCommand.update(ci2);
 		SshCommand.upgrade(ci2);
+		SshCommand.backupPaperMC(ci2);
 		SshCommand.wgetPaperMc(ci2);
 		SshCommand.movePaperMc(ci2);
 		SshCommand.shutdown(ci2);

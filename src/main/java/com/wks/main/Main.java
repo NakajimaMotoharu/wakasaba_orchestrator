@@ -6,6 +6,9 @@ import com.wks.workflow.WksWorkFlow;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 
 public class Main {
@@ -16,8 +19,10 @@ public class Main {
 			System.out.println("The length of the arguments must be 3.");
 		}
 
+		log.add("Batch start time: " + getDateTime());
 		WksWorkFlow.execScheduledJob(args);
-		outLog("./log.txt");
+		log.add("Batch end time: " + getDateTime());
+		outLog("./log/log_" + getDateTime() + ".txt");
 
 	}
 
@@ -33,5 +38,11 @@ public class Main {
 
 		// 出力先クローズ
 		ps.close();
+	}
+
+	/** 日時文字列取得 */
+	private static String getDateTime(){
+		DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+		return ZonedDateTime.now(ZoneId.of("Asia/Tokyo")).format(dateTimeFormatter);
 	}
 }
