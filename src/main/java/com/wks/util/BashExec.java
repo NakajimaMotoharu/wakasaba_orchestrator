@@ -9,16 +9,20 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
 public class BashExec {
+	/** logインスタンス取得 */
 	private static final ArrayList<String> log = Main.log;
 
+	/** updateコマンドの実行 */
 	public static void update() throws IOException, InterruptedException {
 		runCommand("sudo apt update");
 	}
 
+	/** upgradeコマンドの実行 */
 	public static void upgrade() throws IOException, InterruptedException {
 		runCommand("sudo apt upgrade -y");
 	}
 
+	/** shutdownコマンドの実行 */
 	public static void shutdown() throws IOException {
 		// 10秒待機+シャットダウンのコマンドを実行
 		String[] cmd = new String[]{"sh", "-c", "(sleep 60 && sudo shutdown -r now) &"};
@@ -32,7 +36,8 @@ public class BashExec {
 		//出力を無視して終了
 	}
 
-	public static void runCommand(String cmd) throws IOException, InterruptedException {
+	/** 任意のコマンド実行 */
+	private static void runCommand(String cmd) throws IOException, InterruptedException {
 		// ProcessBuilderを指定のコマンドで作成
 		ProcessBuilder processBuilder = new ProcessBuilder("sh", "-c", cmd);
 

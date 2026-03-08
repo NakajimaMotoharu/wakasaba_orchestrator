@@ -2,17 +2,17 @@ package com.wks.cmd;
 
 import com.jcraft.jsch.JSchException;
 import com.wks.main.Main;
+import com.wks.papermc.PaperUrlGen;
 import com.wks.util.ConnectionInformation;
+import com.wks.util.Curl;
 import com.wks.util.SshExec;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 
 public class SshCommand {
-
+	/** logインスタンス取得 */
 	private static final ArrayList<String> log = Main.log;
 
 	/** updateコマンドの実行 */
@@ -28,6 +28,29 @@ public class SshCommand {
 	/** shutdownコマンドの実行 */
 	public static void shutdown(ConnectionInformation ci) throws JSchException, InterruptedException, IOException {
 		runCommand(ci, "sudo shutdown -r now");
+	}
+
+	/** PaperMCクライアントのダウンロード実行 */
+	public static void wgetPaperMc(ConnectionInformation ci) throws IOException, InterruptedException, JSchException {
+		// ユーザエージェントの設定
+		String userAgent = "wakasaba_orchestrator/1.0";
+
+		// 最新バージョンの取得
+		String versionJson = Curl.exec(userAgent, "https://fill.papermc.io/v3/projects/paper");
+		String version = PaperUrlGen.getPaperMcVersion(versionJson);
+
+		// 最新バージョンのサーバクライアントのダウンロードURL取得
+		String urlJson = Curl.exec(userAgent, "https://fill.papermc.io/v3/projects/paper/versions/" + version + "/builds");
+		String url = PaperUrlGen.getPaperMcUrl(urlJson);
+
+		// wgetコマンド構成
+		String cmd = "wget " +
+				"-O download/paper.jar " +
+				"--user-agent=\"" + userAgent + "\" " +
+				"url";
+
+		// コマンド実行
+		runCommand(ci, cmd);
 	}
 
 	/** 任意のコマンド実行 */
