@@ -34,7 +34,7 @@ public class BashExec {
 
 	public static void runCommand(String cmd) throws IOException, InterruptedException {
 		// ProcessBuilderを指定のコマンドで作成
-		ProcessBuilder processBuilder = new ProcessBuilder(cmd);
+		ProcessBuilder processBuilder = new ProcessBuilder("sh", "-c", cmd);
 
 		// プロセス実行
 		Process process = processBuilder.start();
