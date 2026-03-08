@@ -1,5 +1,6 @@
 plugins {
     id 'java'
+    id 'com.gradleup.shadow' version '9.3.2'
 }
 
 group = 'org.example'
@@ -12,6 +13,17 @@ repositories {
 dependencies {
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
+
+    implementation 'com.github.mwiede:jsch:+'
+
+    implementation 'tools.jackson.core:jackson-core:+'
+    implementation 'tools.jackson.core:jackson-databind:+'
+}
+
+shadowJar {
+    manifest {
+        attributes 'Main-Class': 'com.wks.main.Main'
+    }
 }
 
 test {
