@@ -13,10 +13,11 @@ public class Main {
 		}
 
 		ConnectionInformation ci = new ConnectionInformation(args[0], Integer.parseInt(args[1]), args[2], args[3]);
-		String[] ret = SshCommand.runCommand(ci, "ls");
 
-		for (String s : ret) {
-			System.out.println(s);
-		}
+		SshCommand.addLog("# server1");
+		SshCommand.update(ci);
+		SshCommand.upgrade(ci);
+		SshCommand.shutdown(ci);
+		SshCommand.outLog("./log.txt");
 	}
 }
