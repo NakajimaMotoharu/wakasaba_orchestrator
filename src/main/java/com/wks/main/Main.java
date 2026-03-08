@@ -19,7 +19,9 @@ public class Main {
 			System.out.println("The length of the arguments must be 3.");
 		}
 
+		log.add("Batch start time: " + getDateTime());
 		WksWorkFlow.execScheduledJob(args);
+		log.add("Batch end time: " + getDateTime());
 		outLog("./log/log_" + getDateTime() + ".txt");
 
 	}
