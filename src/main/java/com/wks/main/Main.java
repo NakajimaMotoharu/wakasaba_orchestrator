@@ -3,6 +3,7 @@ package com.wks.main;
 import com.jcraft.jsch.JSchException;
 import com.wks.cmd.SshCommand;
 import com.wks.util.ConnectionInformation;
+import com.wks.workflow.WksWorkFlow;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -13,20 +14,13 @@ public class Main {
 	public static final ArrayList<String> log = new ArrayList<>();
 
 	public static void main(String[] args) throws IOException, InterruptedException, JSchException {
-		if (args.length != 4){
-			System.out.println("The length of the arguments must be four.");
+		if (args.length != 3){
+			System.out.println("The length of the arguments must be 3.");
 		}
 
-		ConnectionInformation ci = new ConnectionInformation(args[0], Integer.parseInt(args[1]), args[2], args[3]);
-
-		addLog("# server1");
-		SshCommand.wgetPaperMc(ci);
+		WksWorkFlow.execScheduledJob(args);
 		outLog("./log.txt");
-	}
 
-	/** ログ追加 */
-	public static void addLog(String msg){
-		log.add(msg);
 	}
 
 	/** ログ出力 */

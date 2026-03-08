@@ -45,12 +45,22 @@ public class SshCommand {
 
 		// wgetコマンド構成
 		String cmd = "wget " +
-				"-O download/paper.jar " +
+				"-O /home/mini/mcs/prod/paper.jar " +
 				"--user-agent=\"" + userAgent + "\" " +
 				url;
 
 		// コマンド実行
 		runCommand(ci, cmd);
+	}
+
+	/** PaperMC起動コマンドの実行 */
+	public static void startPaperMC(ConnectionInformation ci) throws JSchException, InterruptedException, IOException {
+		runCommand(ci, "sudo systemctl start papermc");
+	}
+
+	/** PaperMC停止コマンドの実行 */
+	public static void stopPaperMC(ConnectionInformation ci) throws JSchException, InterruptedException, IOException {
+		runCommand(ci, "sudo systemctl stop papermc");
 	}
 
 	/** 任意のコマンド実行 */
