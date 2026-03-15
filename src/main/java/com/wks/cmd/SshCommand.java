@@ -89,7 +89,7 @@ public class SshCommand {
 		waitForBecomeActive(ci);
 
 		// コマンド記述
-		String cmd = "sha256sum download/paper.jar";
+		String cmd = "sha256sum /home/mini/download/paper.jar";
 		SshExec sshExec = new SshExec(ci, cmd);
 
 		// コマンド実行
@@ -157,7 +157,7 @@ public class SshCommand {
 			waitForBecomeActive(ci);
 
 			// コマンド記述
-			cmd = "sha512sum download/pl3xmap.jar";
+			cmd = "sha512sum /home/mini/download/pl3xmap.jar";
 			sshExec = new SshExec(ci, cmd);
 
 			// コマンド実行

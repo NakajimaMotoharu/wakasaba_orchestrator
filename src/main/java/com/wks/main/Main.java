@@ -19,7 +19,7 @@ public class Main {
 			log.add("Batch start time: " + getDateTime());
 			WksWorkFlow.execScheduledJob(args);
 			log.add("Batch end time: " + getDateTime());
-			outLog("./log/log_" + getDateTime() + ".txt");
+			outLog("/home/mini/wakasaba_orchestrator/log/log_" + getDateTime() + ".txt");
 		} else {
 			System.out.println("The length of the arguments must be 3.");
 		}
