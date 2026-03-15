@@ -1,6 +1,7 @@
 package com.wks.main;
 
 import com.jcraft.jsch.JSchException;
+import com.wks.parts.WksConstants;
 import com.wks.workflow.WksWorkFlow;
 
 import java.io.FileNotFoundException;
@@ -15,14 +16,14 @@ public class Main {
 	public static final ArrayList<String> log = new ArrayList<>();
 
 	public static void main(String[] args) throws IOException, InterruptedException, JSchException {
-		if (args.length != 3){
-			System.out.println("The length of the arguments must be 3.");
+		if (args.length == 3){
+			log.add(String.format(WksConstants.LOG_START_TIME, getDateTime()));
+			WksWorkFlow.execScheduledJob(args);
+			log.add(String.format(WksConstants.LOG_END_TIME, getDateTime()));
+			outLog(String.format(WksConstants.PATH_EXEC_LOG, getDateTime()));
+		} else {
+			System.out.println(WksConstants.OTHER_ARGS_MSG);
 		}
-
-		log.add("Batch start time: " + getDateTime());
-		WksWorkFlow.execScheduledJob(args);
-		log.add("Batch end time: " + getDateTime());
-		outLog("./log/log_" + getDateTime() + ".txt");
 
 	}
 
@@ -42,7 +43,7 @@ public class Main {
 
 	/** 日時文字列取得 */
 	private static String getDateTime(){
-		DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
-		return ZonedDateTime.now(ZoneId.of("Asia/Tokyo")).format(dateTimeFormatter);
+		DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(WksConstants.OTHER_DATE_TIME_FMT);
+		return ZonedDateTime.now(ZoneId.of(WksConstants.OTHER_TIME_ZONE)).format(dateTimeFormatter);
 	}
 }

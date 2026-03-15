@@ -3,6 +3,7 @@ package com.wks.workflow;
 import com.jcraft.jsch.JSchException;
 import com.wks.cmd.SshCommand;
 import com.wks.main.Main;
+import com.wks.parts.WksConstants;
 import com.wks.util.BashExec;
 import com.wks.util.ConnectionInformation;
 
@@ -16,14 +17,14 @@ public class WksWorkFlow {
 	public static void execScheduledJob(String[] servers) throws IOException, InterruptedException, JSchException {
 		// サーバ0
 		ConnectionInformation ci1 = ConnectionInformation.getCiFromFile(servers[0]);
-		log.add("/* --------Job start: " + ci1 + "-------- */");
+		log.add(String.format(WksConstants.LOG_SPLIT, ci1));
 		SshCommand.update(ci1);
 		SshCommand.upgrade(ci1);
 		SshCommand.shutdown(ci1);
 
 		// サーバ1
 		ConnectionInformation ci2 = ConnectionInformation.getCiFromFile(servers[1]);
-		log.add("/* --------Job start: " + ci2 + "-------- */");
+		log.add(String.format(WksConstants.LOG_SPLIT, ci2));
 		SshCommand.stopPaperMC(ci2);
 		SshCommand.update(ci2);
 		SshCommand.upgrade(ci2);
@@ -35,13 +36,13 @@ public class WksWorkFlow {
 
 		// サーバ2
 		ConnectionInformation ci3 = ConnectionInformation.getCiFromFile(servers[2]);
-		log.add("/* --------Job start: " + ci3 + "-------- */");
+		log.add(String.format(WksConstants.LOG_SPLIT, ci3));
 		SshCommand.update(ci3);
 		SshCommand.upgrade(ci3);
 		SshCommand.shutdown(ci3);
 
 		// 自サーバ
-		log.add("/* --------Job start: this server-------- */");
+		log.add(String.format(WksConstants.LOG_SPLIT, WksConstants.LOG_THIS_SERVER));
 		BashExec.update();
 		BashExec.upgrade();
 		BashExec.shutdown();
