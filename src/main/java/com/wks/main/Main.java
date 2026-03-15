@@ -1,7 +1,6 @@
 package com.wks.main;
 
 import com.jcraft.jsch.JSchException;
-import com.wks.util.Curl;
 import com.wks.workflow.WksWorkFlow;
 
 import java.io.FileNotFoundException;
@@ -16,10 +15,7 @@ public class Main {
 	public static final ArrayList<String> log = new ArrayList<>();
 
 	public static void main(String[] args) throws IOException, InterruptedException, JSchException {
-		if (args.length == 1 && "-test".equals(args[0])){
-			String json = Curl.exec("wakasaba_orchestrator/1.0", "https://api.modrinth.com/v2/project/pl3xmap");
-			System.out.println(json);
-		} else if (args.length == 3){
+		if (args.length == 3){
 			log.add("Batch start time: " + getDateTime());
 			WksWorkFlow.execScheduledJob(args);
 			log.add("Batch end time: " + getDateTime());

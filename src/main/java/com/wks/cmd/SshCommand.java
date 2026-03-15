@@ -51,6 +51,21 @@ public class SshCommand {
 
 		// コマンド実行
 		runCommand(ci, cmd);
+
+		// Pl3xMapのダウンロードURL取得
+		String pl3xMapUrlJson = Curl.exec(userAgent, "https://api.modrinth.com/v2/project/pl3xmap/version");
+		String pl3xMapUrl = PaperUrlGen.getPl3xMapUrl(pl3xMapUrlJson, version);
+
+		if (pl3xMapUrl != null){
+			// wgetコマンド構成
+			String pl3xCmd = "wget " +
+					"-O /home/mini/download/pl3xmap.jar " +
+					"--user-agent=\"" + userAgent + "\" " +
+					pl3xMapUrl;
+
+			// コマンド実行
+			runCommand(ci, pl3xCmd);
+		}
 	}
 
 	/** PaperMCクライアントの検証と移動 */
@@ -66,6 +81,10 @@ public class SshCommand {
 		String sha256Json = Curl.exec(userAgent, "https://fill.papermc.io/v3/projects/paper/versions/" + version + "/builds");
 		String expectedSHA256 = PaperUrlGen.getPaperMcSha256(sha256Json);
 
+		// 最新バージョンのPl3xMapのSHA256取得
+		String sha512Json = Curl.exec(userAgent, "https://api.modrinth.com/v2/project/pl3xmap/version");
+		String expectedSHA512 = PaperUrlGen.getPl3xMapSha512(sha512Json, version);
+
 		// Active待機
 		waitForBecomeActive(ci);
 
@@ -77,7 +96,7 @@ public class SshCommand {
 		String[] ret = sshExec.execute();
 
 		// 実行コマンドをlogに出力
-		log.add("& " + cmd);
+		log.add("$ " + cmd);
 
 		// 返り値をログに追加
 		log.addAll(Arrays.asList(ret));
@@ -95,7 +114,7 @@ public class SshCommand {
 			ret = sshExec.execute();
 
 			// 実行コマンドをlogに出力
-			log.add("& " + cmd);
+			log.add("$ " + cmd);
 
 			// 返り値をログに追加
 			log.addAll(Arrays.asList(ret));
@@ -111,10 +130,63 @@ public class SshCommand {
 			ret = sshExec.execute();
 
 			// 実行コマンドをlogに出力
-			log.add("& " + cmd);
+			log.add("$ " + cmd);
 
 			// 返り値をログに追加
 			log.addAll(Arrays.asList(ret));
+		}
+
+		if (expectedSHA512 != null){
+			// Active待機
+			waitForBecomeActive(ci);
+
+			// コマンド記述
+			cmd = "sha512sum download/pl3xmap.jar";
+			sshExec = new SshExec(ci, cmd);
+
+			// コマンド実行
+			ret = sshExec.execute();
+
+			// 実行コマンドをlogに出力
+			log.add("$ " + cmd);
+
+			// 返り値をログに追加
+			log.addAll(Arrays.asList(ret));
+
+			// SHA512検証(正常ファイルならファイルコピー実行)
+			if (ret[0].substring(0, 128).equals(expectedSHA512)){
+				// Active待機
+				waitForBecomeActive(ci);
+
+				// コマンド記述
+				cmd = "rm /home/mini/mcs/prod/plugins/pl3xmap.jar";
+				sshExec = new SshExec(ci, cmd);
+
+				// コマンド実行
+				ret = sshExec.execute();
+
+				// 実行コマンドをlogに出力
+				log.add("$ " + cmd);
+
+				// 返り値をログに追加
+				log.addAll(Arrays.asList(ret));
+
+				// Active待機
+				waitForBecomeActive(ci);
+
+				// コマンド記述
+				cmd = "mv /home/mini/download/pl3xmap.jar /home/mini/mcs/prod/plugins/pl3xmap.jar";
+				sshExec = new SshExec(ci, cmd);
+
+				// コマンド実行
+				ret = sshExec.execute();
+
+				// 実行コマンドをlogに出力
+				log.add("$ " + cmd);
+
+				// 返り値をログに追加
+				log.addAll(Arrays.asList(ret));
+			}
 		}
 
 	}
@@ -146,7 +218,7 @@ public class SshCommand {
 		String[] ret = sshExec.execute();
 
 		// 実行コマンドをlogに出力
-		log.add("& " + cmd);
+		log.add("$ " + cmd);
 
 		// 返り値をログに追加
 		log.addAll(Arrays.asList(ret));

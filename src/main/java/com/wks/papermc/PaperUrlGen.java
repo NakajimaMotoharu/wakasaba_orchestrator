@@ -45,7 +45,35 @@ public class PaperUrlGen {
 
 	}
 
-	public static  String getPl3xMapVersion(String[] json){
-		return null;
+	public static String getPl3xMapUrl(String json, String version){
+
+		ObjectMapper om = new ObjectMapper();
+		JsonNode src = om.readTree(json);
+		JsonNode overView = src.get(0);
+
+		if (!version.equals(overView.get("game_versions").get(0).toString().replace("\"", ""))){
+			return null;
+		}
+
+		JsonNode fileInfo = overView.get("files");
+		JsonNode urlInfo = fileInfo.get(0).get("url");
+
+		return urlInfo.toString().replace("\"", "");
+	}
+
+	public static String getPl3xMapSha512(String json, String version){
+
+		ObjectMapper om = new ObjectMapper();
+		JsonNode src = om.readTree(json);
+		JsonNode overView = src.get(0);
+
+		if (!version.equals(overView.get("game_versions").get(0).toString().replace("\"", ""))){
+			return null;
+		}
+
+		JsonNode fileInfo = overView.get("files");
+		JsonNode sha512Info = fileInfo.get(0).get("hashes").get("sha512");
+
+		return sha512Info.toString().replace("\"", "");
 	}
 }
