@@ -13,17 +13,33 @@ public class BashExec {
 	/** logインスタンス取得 */
 	private static final ArrayList<String> log = Main.log;
 
-	/** updateコマンドの実行 */
+	/**
+	 * updateコマンドの実行
+	 *
+	 * @throws IOException シェルコマンド実行失敗時
+	 * @throws InterruptedException シェルコマンド実行失敗時
+	 */
 	public static void update() throws IOException, InterruptedException {
+		// updateコマンドの実行
 		runCommand(WksConstants.CMD_UPDATE);
 	}
 
-	/** upgradeコマンドの実行 */
+	/**
+	 * upgradeコマンドの実行
+	 *
+	 * @throws IOException シェルコマンド実行失敗時
+	 * @throws InterruptedException シェルコマンド実行失敗時
+	 */
 	public static void upgrade() throws IOException, InterruptedException {
+		// upgradeコマンドの実行
 		runCommand(WksConstants.CMD_UPGRADE);
 	}
 
-	/** shutdownコマンドの実行 */
+	/**
+	 * shutdownコマンドの実行
+	 *
+	 * @throws IOException シェルコマンド実行失敗時
+	 */
 	public static void shutdown() throws IOException {
 		// 60秒待機+シャットダウンのコマンドを作成
 		String shutdownCmd = WksConstants.CMD_SLEEP_SHUTDOWN;
@@ -43,7 +59,12 @@ public class BashExec {
 		//出力を無視して終了
 	}
 
-	/** 任意のコマンド実行 */
+	/**
+	 * 任意のコマンド実行
+	 *
+	 * @throws IOException シェルコマンド実行失敗時
+	 * @throws InterruptedException シェルコマンド実行失敗時
+	 */
 	private static void runCommand(String cmd) throws IOException, InterruptedException {
 		// ProcessBuilderを指定のコマンドで作成
 		ProcessBuilder processBuilder =
@@ -67,14 +88,16 @@ public class BashExec {
 			String line = bufferedReader.readLine();
 			// これ以上読み取れなければ終了
 			if (line == null){
+				// ループ離脱
 				break;
 			}
 			// logに追加
 			log.add(line);
 		}
 
-		// 各Readerをクローズ
+		// bufferedReaderをクローズ
 		bufferedReader.close();
+		// inputStreamReaderをクローズ
 		inputStreamReader.close();
 	}
 }
