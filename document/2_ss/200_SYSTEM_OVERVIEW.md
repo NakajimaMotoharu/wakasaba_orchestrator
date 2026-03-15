@@ -26,7 +26,7 @@
 java -jar wakasaba_orchestrator-1.0-SNAPSHOT-all.jar <server0_file> <server1_file> <server2_file>
 ```
 
-各引数はサーバ接続情報ファイルのパスを示す。ファイルフォーマットについては [補足資料：接続情報ファイル仕様](./90_SERVER_FILE_SPEC.md)
+各引数はサーバ接続情報ファイルのパスを示す。ファイルフォーマットについては [補足資料：接続情報ファイル仕様](./290_SERVER_FILE_SPEC)
 を参照。
 
 ---
@@ -58,15 +58,15 @@ com.wks
 
 | クラス名                                                   | パッケージ              | 種別     | 役割                                 |
 |--------------------------------------------------------|--------------------|--------|------------------------------------|
-| [Main](./01_Main.md)                                   | `com.wks.main`     | class  | エントリポイント。引数検証・ログ管理・ログファイル出力        |
-| [WksWorkFlow](./02_WksWorkFlow.md)                     | `com.wks.workflow` | class  | 3台のリモートサーバ＋自サーバへの処理シーケンス定義         |
-| [SshCommand](./03_SshCommand.md)                       | `com.wks.cmd`      | class  | SSH経由コマンド実行の業務ロジックラッパー             |
-| [PaperUrlGen](./04_PaperUrlGen.md)                     | `com.wks.papermc`  | class  | PaperMC・Pl3xMap APIレスポンスJSONパーサ    |
-| [ConnectionInformation](./05_ConnectionInformation.md) | `com.wks.util`     | record | サーバ接続情報（host/port/user/key）の保持と読込み |
-| [SshExec](./06_SshExec.md)                             | `com.wks.util`     | class  | JSch を用いたSSHセッション管理・コマンド実行         |
-| [BashExec](./07_BashExec.md)                           | `com.wks.util`     | class  | ProcessBuilder を用いたローカルBashコマンド実行  |
-| [Curl](./08_Curl.md)                                   | `com.wks.util`     | class  | Java標準HttpClient を用いたHTTP GETリクエスト |
-| [WksConstants](./09_WksConstants.md)                   | `com.wks.parts`    | class  | アプリケーション全体で使用する定数の一元管理             |
+| [Main](./201_Main)                                   | `com.wks.main`     | class  | エントリポイント。引数検証・ログ管理・ログファイル出力        |
+| [WksWorkFlow](./202_WksWorkFlow)                     | `com.wks.workflow` | class  | 3台のリモートサーバ＋自サーバへの処理シーケンス定義         |
+| [SshCommand](./203_SshCommand)                       | `com.wks.cmd`      | class  | SSH経由コマンド実行の業務ロジックラッパー             |
+| [PaperUrlGen](./204_PaperUrlGen)                     | `com.wks.papermc`  | class  | PaperMC・Pl3xMap APIレスポンスJSONパーサ    |
+| [ConnectionInformation](./205_ConnectionInformation) | `com.wks.util`     | record | サーバ接続情報（host/port/user/key）の保持と読込み |
+| [SshExec](./206_SshExec)                             | `com.wks.util`     | class  | JSch を用いたSSHセッション管理・コマンド実行         |
+| [BashExec](./207_BashExec)                           | `com.wks.util`     | class  | ProcessBuilder を用いたローカルBashコマンド実行  |
+| [Curl](./208_Curl)                                   | `com.wks.util`     | class  | Java標準HttpClient を用いたHTTP GETリクエスト |
+| [WksConstants](./209_WksConstants)                   | `com.wks.parts`    | class  | アプリケーション全体で使用する定数の一元管理             |
 
 ---
 
@@ -129,6 +129,6 @@ main(args)
 
 ## 補足資料
 
-- [接続情報ファイル仕様](./90_SERVER_FILE_SPEC.md)
-- [PaperMC API仕様メモ](./91_PAPERMC_API_NOTE.md)
-- [例外・エラーハンドリング方針](./92_ERROR_HANDLING.md)
+- [接続情報ファイル仕様](./290_SERVER_FILE_SPEC)
+- [PaperMC API仕様メモ](./291_PAPERMC_API_NOTE)
+- [例外・エラーハンドリング方針](./292_ERROR_HANDLING)
