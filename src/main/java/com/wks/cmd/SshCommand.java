@@ -136,6 +136,22 @@ public class SshCommand {
 			log.addAll(Arrays.asList(ret));
 		}
 
+		// Active待機
+		waitForBecomeActive(ci);
+
+		// コマンド記述
+		cmd = "rm /home/mini/mcs/prod/plugins/pl3xmap.jar";
+		sshExec = new SshExec(ci, cmd);
+
+		// コマンド実行
+		ret = sshExec.execute();
+
+		// 実行コマンドをlogに出力
+		log.add("$ " + cmd);
+
+		// 返り値をログに追加
+		log.addAll(Arrays.asList(ret));
+
 		if (expectedSHA512 != null){
 			// Active待機
 			waitForBecomeActive(ci);
@@ -155,22 +171,6 @@ public class SshCommand {
 
 			// SHA512検証(正常ファイルならファイルコピー実行)
 			if (ret[0].substring(0, 128).equals(expectedSHA512)){
-				// Active待機
-				waitForBecomeActive(ci);
-
-				// コマンド記述
-				cmd = "rm /home/mini/mcs/prod/plugins/pl3xmap.jar";
-				sshExec = new SshExec(ci, cmd);
-
-				// コマンド実行
-				ret = sshExec.execute();
-
-				// 実行コマンドをlogに出力
-				log.add("$ " + cmd);
-
-				// 返り値をログに追加
-				log.addAll(Arrays.asList(ret));
-
 				// Active待機
 				waitForBecomeActive(ci);
 
