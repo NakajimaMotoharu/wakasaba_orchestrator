@@ -100,7 +100,7 @@ myuser              ← 3行目: user
 /home/user/.ssh/id_rsa  ← 4行目: key（秘密鍵ファイルの絶対パス）
 ```
 
-詳細は [補足資料：接続情報ファイル仕様](./90_SERVER_FILE_SPEC.md) を参照。
+詳細は [補足資料：接続情報ファイル仕様](./290_SERVER_FILE_SPEC) を参照。
 
 ---
 
