@@ -44,4 +44,8 @@ public class PaperUrlGen {
 		return sha256.toString().replace("\"", "");
 
 	}
+
+	public static  String getPl3xMapVersion(String[] json){
+		return null;
+	}
 }
