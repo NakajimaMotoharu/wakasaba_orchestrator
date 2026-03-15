@@ -21,6 +21,6 @@ public record ConnectionInformation(String host, int port, String user, String k
 	/** サーバ情報を文字列に変換 */
 	@Override
 	public String toString() {
-		return String.format(WksConstants.SERVER_INFO, host, port, user);
+		return String.format(WksConstants.OTHER_SERVER_INFO, host, port, user);
 	}
 }

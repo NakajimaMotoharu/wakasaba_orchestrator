@@ -65,7 +65,7 @@ public class SshExec {
 		session.connect();
 
 		// 1コマンド実行モードでチャンネル生成
-		ChannelExec channelExec = (ChannelExec) session.openChannel(WksConstants.CHANNEL_EXEC_OPTION);
+		ChannelExec channelExec = (ChannelExec) session.openChannel(WksConstants.OTHER_CHANNEL_EXEC_OPTION);
 
 		// 実行コマンドを設定
 		channelExec.setCommand(cmd);
@@ -130,7 +130,7 @@ public class SshExec {
 		);
 
 		// known_hostsチェック無効化
-		session.setConfig(WksConstants.SSH_CONFIG, WksConstants.SSH_CONFIG_VAL);
+		session.setConfig(WksConstants.OTHER_SSH_CONFIG, WksConstants.OTHER_SSH_CONFIG_VAL);
 
 		// セッション返却
 		return session;

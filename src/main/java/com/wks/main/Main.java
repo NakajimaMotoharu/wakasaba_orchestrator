@@ -22,7 +22,7 @@ public class Main {
 			log.add(String.format(WksConstants.LOG_END_TIME, getDateTime()));
 			outLog(String.format(WksConstants.PATH_EXEC_LOG, getDateTime()));
 		} else {
-			System.out.println(WksConstants.ARGS_MSG);
+			System.out.println(WksConstants.OTHER_ARGS_MSG);
 		}
 
 	}
@@ -43,7 +43,7 @@ public class Main {
 
 	/** 日時文字列取得 */
 	private static String getDateTime(){
-		DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(WksConstants.DATE_TIME_FMT);
-		return ZonedDateTime.now(ZoneId.of(WksConstants.TIME_ZONE)).format(dateTimeFormatter);
+		DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(WksConstants.OTHER_DATE_TIME_FMT);
+		return ZonedDateTime.now(ZoneId.of(WksConstants.OTHER_TIME_ZONE)).format(dateTimeFormatter);
 	}
 }

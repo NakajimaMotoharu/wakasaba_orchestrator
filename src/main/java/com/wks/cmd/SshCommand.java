@@ -34,7 +34,7 @@ public class SshCommand {
 	/** PaperMCクライアントのダウンロード実行 */
 	public static void wgetPaperMc(ConnectionInformation ci) throws IOException, InterruptedException, JSchException {
 		// ユーザエージェントの設定
-		String userAgent = WksConstants.USER_AGENT;
+		String userAgent = WksConstants.OTHER_USER_AGENT;
 
 		// 最新バージョンの取得
 		String versionJson = Curl.exec(userAgent, WksConstants.URL_PAPERMC_VERSION);
@@ -66,7 +66,7 @@ public class SshCommand {
 	/** PaperMCクライアントの検証と移動 */
 	public static void movePaperMc(ConnectionInformation ci) throws IOException, InterruptedException, JSchException {
 		// ユーザエージェントの設定
-		String userAgent = WksConstants.USER_AGENT;
+		String userAgent = WksConstants.OTHER_USER_AGENT;
 
 		// 最新バージョンの取得
 		String versionJson = Curl.exec(userAgent, WksConstants.URL_PAPERMC_VERSION);

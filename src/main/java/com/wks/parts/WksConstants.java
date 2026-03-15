@@ -58,13 +58,13 @@ public class WksConstants {
 	public static final String JSON_REPLACE_ES = "";
 
 	// その他
-	public static final String ARGS_MSG = "The length of the arguments must be 3.";
-	public static final String TIME_ZONE = "Asia/Tokyo";
-	public static final String DATE_TIME_FMT = "yyyyMMddHHmmss";
-	public static final String USER_AGENT = "wakasaba_orchestrator/1.0";
-	public static final String SERVER_INFO = "{host: \"%s\", port: %d, user: \"%s\"}";
-	public static final String CHANNEL_EXEC_OPTION = "exec";
-	public static final String SSH_CONFIG = "StrictHostKeyChecking";
-	public static final String SSH_CONFIG_VAL = "no";
+	public static final String OTHER_ARGS_MSG = "The length of the arguments must be 3.";
+	public static final String OTHER_TIME_ZONE = "Asia/Tokyo";
+	public static final String OTHER_DATE_TIME_FMT = "yyyyMMddHHmmss";
+	public static final String OTHER_USER_AGENT = "wakasaba_orchestrator/1.0";
+	public static final String OTHER_SERVER_INFO = "{host: \"%s\", port: %d, user: \"%s\"}";
+	public static final String OTHER_CHANNEL_EXEC_OPTION = "exec";
+	public static final String OTHER_SSH_CONFIG = "StrictHostKeyChecking";
+	public static final String OTHER_SSH_CONFIG_VAL = "no";
 
 }
