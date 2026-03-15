@@ -4,6 +4,7 @@ import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
+import com.wks.parts.WksConstants;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -64,7 +65,7 @@ public class SshExec {
 		session.connect();
 
 		// 1コマンド実行モードでチャンネル生成
-		ChannelExec channelExec = (ChannelExec) session.openChannel("exec");
+		ChannelExec channelExec = (ChannelExec) session.openChannel(WksConstants.OTHER_CHANNEL_EXEC_OPTION);
 
 		// 実行コマンドを設定
 		channelExec.setCommand(cmd);
@@ -129,7 +130,7 @@ public class SshExec {
 		);
 
 		// known_hostsチェック無効化
-		session.setConfig("StrictHostKeyChecking", "no");
+		session.setConfig(WksConstants.OTHER_SSH_CONFIG, WksConstants.OTHER_SSH_CONFIG_VAL);
 
 		// セッション返却
 		return session;

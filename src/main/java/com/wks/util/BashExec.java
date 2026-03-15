@@ -1,6 +1,7 @@
 package com.wks.util;
 
 import com.wks.main.Main;
+import com.wks.parts.WksConstants;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -14,20 +15,21 @@ public class BashExec {
 
 	/** updateコマンドの実行 */
 	public static void update() throws IOException, InterruptedException {
-		runCommand("sudo apt update");
+		runCommand(WksConstants.CMD_UPDATE);
 	}
 
 	/** upgradeコマンドの実行 */
 	public static void upgrade() throws IOException, InterruptedException {
-		runCommand("sudo apt upgrade -y");
+		runCommand(WksConstants.CMD_UPGRADE);
 	}
 
 	/** shutdownコマンドの実行 */
 	public static void shutdown() throws IOException {
-		String shutdownCmd = "(sleep 60 && sudo shutdown -r now) &";
+		// 60秒待機+シャットダウンのコマンドを作成
+		String shutdownCmd = WksConstants.CMD_SLEEP_SHUTDOWN;
 
-		// 10秒待機+シャットダウンのコマンドを実行
-		String[] cmd = new String[]{"sh", "-c", shutdownCmd};
+		// コマンドを実行
+		String[] cmd = new String[]{WksConstants.CMD_SHELL_HEAD, WksConstants.CMD_SHELL_OPTION, shutdownCmd};
 
 		// ProcessBuilderを指定のコマンドで作成
 		ProcessBuilder processBuilder = new ProcessBuilder(cmd);
@@ -36,7 +38,7 @@ public class BashExec {
 		processBuilder.start();
 
 		// logファイルにコマンド追記
-		log.add("$ " + shutdownCmd);
+		log.add(String.format(WksConstants.LOG_COMMAND, shutdownCmd));
 
 		//出力を無視して終了
 	}
@@ -44,7 +46,8 @@ public class BashExec {
 	/** 任意のコマンド実行 */
 	private static void runCommand(String cmd) throws IOException, InterruptedException {
 		// ProcessBuilderを指定のコマンドで作成
-		ProcessBuilder processBuilder = new ProcessBuilder("sh", "-c", cmd);
+		ProcessBuilder processBuilder =
+				new ProcessBuilder(WksConstants.CMD_SHELL_HEAD, WksConstants.CMD_SHELL_OPTION, cmd);
 
 		// プロセス実行
 		Process process = processBuilder.start();
@@ -56,7 +59,7 @@ public class BashExec {
 		BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
 
 		// 実行コマンドをログに追加
-		log.add("$ " + cmd);
+		log.add(String.format(WksConstants.LOG_COMMAND, cmd));
 
 		// 出力を1行ずつlogに追加
 		while (true){
