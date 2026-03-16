@@ -2,14 +2,14 @@
 
 ## 基本情報
 
-| 項目       | 内容                                                                               |
-|----------|----------------------------------------------------------------------------------|
-| 完全修飾クラス名 | `com.wks.util.SshExec`                                                           |
-| ファイル名    | `SshExec.java`                                                                   |
-| 種別       | class（public）                                                                    |
-| 責務       | JSch ライブラリを使用してSSHセッションを確立し、1コマンドを実行して標準出力を返す。接続確認（疎通チェック）機能も提供する                |
-| 依存クラス    | `ConnectionInformation`, `WksConstants`                                          |
-| 依存ライブラリ  | `com.jcraft.jsch.JSch`, `com.jcraft.jsch.Session`, `com.jcraft.jsch.ChannelExec` |
+| 項目       | 内容                                                                                                                                                       |
+|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 完全修飾クラス名 | `com.wks.util.SshExec`                                                                                                                                   |
+| ファイル名    | `SshExec.java`                                                                                                                                           |
+| 種別       | class（public）                                                                                                                                            |
+| 責務       | JSch ライブラリを使用してSSHセッションを確立し、1コマンドを実行して標準出力を返す。接続確認（疎通チェック）機能も提供する                                                                                        |
+| 依存クラス    | `ConnectionInformation`, `WksConstants`                                                                                                                  |
+| 依存ライブラリ  | `com.jcraft.jsch.JSch`, `com.jcraft.jsch.Session`, `com.jcraft.jsch.ChannelExec`（build.gradle: `com.github.mwiede:jsch`、JCraft 版 JSch のフォーク版が同パッケージ名で提供） |
 
 ---
 
