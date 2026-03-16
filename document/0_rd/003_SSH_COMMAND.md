@@ -118,6 +118,8 @@
 ## 制約・注意事項
 
 - `runCommand` はコマンド実行前に必ず `waitForBecomeActive` を呼ぶため、再起動中のサーバへも自動で待機・リトライが行われること。
+- `movePaperMc` は `runCommand` を経由せず、`SshExec` を直接操作してコマンドを実行すること。SHA検証の結果によってコマンドの実行有無を制御する必要があるため、共通処理である
+  `runCommand` には委譲できない設計となっている。
 - `movePaperMc` におけるPl3xMapの旧ファイル削除（`CMD_PL3XMAP_RM`）は、新バージョンのダウンロード有無にかかわらず**常に実行
   **すること。これにより古いバージョンのPl3xMapが残留しないことを保証する。
 - `wgetPaperMc` と `movePaperMc` の両方で独立してAPIを呼び出しバージョン情報を取得すること。
