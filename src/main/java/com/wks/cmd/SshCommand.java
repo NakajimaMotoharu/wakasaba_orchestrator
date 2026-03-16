@@ -123,9 +123,9 @@ public class SshCommand {
 		// 最新バージョンのサーバクライアントのSHA256の値取得
 		String expectedSHA256 = PaperUrlGen.getPaperMcSha256(sha256Json);
 
-		// 最新バージョンのPl3xMapのSHA256のJson取得
+		// 最新バージョンのPl3xMapのSHA512のJson取得
 		String sha512Json = Curl.exec(userAgent, WksConstants.URL_PL3XMAP_DL_URL);
-		// 最新バージョンのPl3xMapのSHA256の値取得
+		// 最新バージョンのPl3xMapのSHA512の値取得
 		String expectedSHA512 = PaperUrlGen.getPl3xMapSha512(sha512Json, version);
 
 		// Active待機
