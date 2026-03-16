@@ -57,7 +57,7 @@
 
 ### WF-05：自サーバのOSメンテナンス（Bash）
 
-1. 自サーバ処理開始区切りログ（`WksConstants.LOG_THIS_SERVER`）をグローバルログへ追記する
+1. `WksConstants.LOG_SPLIT` のフォーマットに `WksConstants.LOG_THIS_SERVER` を埋め込んだ区切りログをグローバルログへ追記する
 2. `BashExec.update()` を実行する
 3. `BashExec.upgrade()` を実行する
 4. `BashExec.shutdown()` を実行する
