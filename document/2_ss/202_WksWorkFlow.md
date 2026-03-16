@@ -80,7 +80,7 @@ public static void execScheduledJob(String[] servers)
   20. SshCommand.shutdown(ci3)
 
 [自サーバ (ローカル)]
-  21. log に "this server" を追記
+  21. log に `LOG_SPLIT` フォーマットに `LOG_THIS_SERVER` を埋め込んだ区切りログを追記
   22. BashExec.update()
   23. BashExec.upgrade()
   24. BashExec.shutdown()

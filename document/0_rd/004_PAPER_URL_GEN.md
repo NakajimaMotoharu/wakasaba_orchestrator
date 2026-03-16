@@ -2,14 +2,14 @@
 
 ## 基本情報
 
-| 項目       | 内容                                                                          |
-|----------|-----------------------------------------------------------------------------|
-| 完全修飾クラス名 | `com.wks.papermc.PaperUrlGen`                                               |
-| ファイル名    | `PaperUrlGen.java`                                                          |
-| 種別       | class（public）                                                               |
-| 責務       | PaperMC API・Modrinth API から取得したJSONレスポンスを解析し、バージョン文字列・ダウンロードURL・チェックサムを抽出する |
-| 主な依存クラス  | `WksConstants`                                                              |
-| 依存ライブラリ  | Jackson Databind（`ObjectMapper`、`JsonNode`）                                 |
+| 項目       | 内容                                                                                        |
+|----------|-------------------------------------------------------------------------------------------|
+| 完全修飾クラス名 | `com.wks.papermc.PaperUrlGen`                                                             |
+| ファイル名    | `PaperUrlGen.java`                                                                        |
+| 種別       | class（public）                                                                             |
+| 責務       | PaperMC API・Modrinth API から取得したJSONレスポンスを解析し、バージョン文字列・ダウンロードURL・チェックサムを抽出する               |
+| 主な依存クラス  | `WksConstants`                                                                            |
+| 依存ライブラリ  | Jackson Databind（`tools.jackson.databind.ObjectMapper`、`tools.jackson.databind.JsonNode`） |
 
 ---
 

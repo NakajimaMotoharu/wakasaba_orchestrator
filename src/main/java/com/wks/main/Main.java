@@ -68,7 +68,7 @@ public class Main {
 	/**
 	 * 日時文字列取得
 	 *
-	 * @return メソッド実行時の日時をyyyyMMddhhmmss形式で返却
+	 * @return メソッド実行時の日時をyyyyMMddHHmmss形式で返却
 	 */
 	private static String getDateTime(){
 		// 出力フォーマット設定
