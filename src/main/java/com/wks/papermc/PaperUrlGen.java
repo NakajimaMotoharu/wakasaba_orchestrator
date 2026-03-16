@@ -101,11 +101,11 @@ public class PaperUrlGen {
 	}
 
 	/**
-	 * Pl3xMapの最新バージョンのURLのSHA-256を取得するルーチン
+	 * Pl3xMapの最新バージョンのURLのSHA-512を取得するルーチン
 	 *
 	 * @param json APIから取得したJSONデータ
 	 * @param version PaperMCの最新バージョン
-	 * @return Pl3xMapの最新バージョンのサーバクライアントのSHA256期待値データ
+	 * @return Pl3xMapの最新バージョンのサーバクライアントのSHA512期待値データ
 	 */
 	public static String getPl3xMapSha512(String json, String version){
 		// jsonの解析用インスタンス作成
