@@ -61,7 +61,7 @@
 
 ```java
 public class SshExec {
-	public boolean isAlive() {
+	public boolean isAlive() throws JSchException {
 		// 略
 		try {
 			session.connect();
