@@ -4,9 +4,9 @@ import com.jcraft.jsch.JSchException;
 import com.wks.parts.WksConstants;
 import com.wks.workflow.WksWorkFlow;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -49,11 +49,11 @@ public class Main {
 	 * ログ出力
 	 *
 	 * @param path 出力先ファイルパス
-	 * @throws FileNotFoundException ファイル出力失敗
+	 * @throws IOException ファイル出力失敗
 	 */
-	public static void outLog(String path) throws FileNotFoundException {
+	public static void outLog(String path) throws IOException {
 		// 出力先指定
-		PrintStream ps = new PrintStream(path);
+		PrintStream ps = new PrintStream(path, StandardCharsets.UTF_8);
 
 		// ログ各行に対してループ
 		for (String s : log) {
