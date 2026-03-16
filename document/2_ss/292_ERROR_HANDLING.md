@@ -95,3 +95,4 @@ public class SshExec {
 - 各処理ステップを `try-catch` で囲み、一部サーバの失敗時に残りのサーバ処理を継続する設計にすることで可用性が向上する。
 - 処理途中で例外が発生した際も `outLog()` が呼ばれるよう `finally` ブロックを活用することで、デバッグ情報の保全が期待できる。
 - `PaperUrlGen` の `JacksonException` / `NullPointerException` に対する明示的なハンドリングを追加することで、APIレスポンス変更時のデバッグが容易になる。
+- `Curl.exec` におけるHTTPステータスコードの検証を追加することで、APIエラー時の原因特定が容易になる。
