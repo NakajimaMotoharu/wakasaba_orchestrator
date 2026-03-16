@@ -43,6 +43,8 @@
 7. `SshCommand.wgetPaperMc(ci)` を実行する
 8. `SshCommand.movePaperMc(ci)` を実行する
 9. `SshCommand.shutdown(ci)` を実行する
+    - 再起動後の接続待機は `SshCommand` 内の `waitForBecomeActive` が自動的に処理する（FR-04 ステップ8に相当）。
+      `WksWorkFlow` 側での明示的な待機処理は不要
 10. `SshCommand.startPaperMC(ci)` を実行する
 
 ### WF-04：サーバ2 のOSメンテナンス（SSH）
