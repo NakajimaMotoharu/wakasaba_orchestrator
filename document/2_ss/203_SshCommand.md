@@ -203,7 +203,8 @@ private static void runCommand(ConnectionInformation ci, String cmd)
 		throws JSchException, InterruptedException, IOException;
 ```
 
-コマンド実行の共通処理。すべての public メソッドから間接的に呼ばれる。
+コマンド実行の共通処理。`update`・`upgrade`・`shutdown`・`startPaperMC`・`stopPaperMC`・`backupPaperMC` から呼ばれる（
+`movePaperMc` は内部で直接 `SshExec` を操作するため、このメソッドを経由しない）。
 
 #### 処理フロー
 
