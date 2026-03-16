@@ -194,7 +194,8 @@ main(args)
 - 認証方式: 公開鍵認証（秘密鍵ファイルパスを接続情報ファイルで指定）
 - `StrictHostKeyChecking=no` を設定し、known_hosts 検証を無効化する。
 - コマンドは `ChannelExec` モードで1コマンドずつ実行する。
-- サーバ再起動後の再接続は `SshCommand.waitForBecomeActive()` がポーリング（1秒間隔）で自動待機する。
+- サーバ再起動後の再接続は `SshCommand.waitForBecomeActive()`
+  がポーリング（1秒間隔）で自動待機する。この待機はすべてのSSHコマンド実行前に行われるため、再起動中のサーバへも自動でリトライが行われる。
 
 ### HTTP REST API
 
