@@ -114,7 +114,9 @@
 ## 制約・注意事項
 
 - ファイルパスはすべて `/home/mini/` 以下に固定されており、実行環境に依存する。環境変更時はこのクラスの定数のみを修正すれば対応できること。
-- `CMD_WGET_PAPERMC` / `CMD_WGET_PL3XMAP` は `PATH_DL_PAPERMC` / `PATH_DL_PL3XMAP`
-  の値をコンパイル時定数連結で組み立てているため、パス定数を変更するとコマンド定数にも自動反映されること。
+- ファイルパスに依存するすべてのコマンド定数（`CMD_WGET_PAPERMC` / `CMD_WGET_PL3XMAP` /
+  `CMD_PAPERMC_HASH` / `CMD_PAPERMC_RM` / `CMD_PAPERMC_MV` /
+  `CMD_PL3XMAP_HASH` / `CMD_PL3XMAP_RM` / `CMD_PL3XMAP_MV` /
+  `CMD_PAPERMC_BACKUP`）はパス定数のコンパイル時定数連結で組み立てられているため、パス定数を変更するとこれらすべてのコマンド定数に自動反映されること。
 - 本クラスはインスタンス化を意図しないが、現在の実装では private コンストラクタが定義されていない。設計意図をコードで明示するために
   private コンストラクタの追加を検討すること。
