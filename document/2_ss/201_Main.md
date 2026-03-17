@@ -83,7 +83,7 @@ args.length == 3 ?
 ### `outLog(String path)`
 
 ```java
-public static void outLog(String path) throws FileNotFoundException;
+public static void outLog(String path) throws IOException;
 ```
 
 #### 処理フロー
@@ -102,9 +102,9 @@ public static void outLog(String path) throws FileNotFoundException;
 
 #### 例外
 
-| 例外クラス                   | 発生条件                |
-|-------------------------|---------------------|
-| `FileNotFoundException` | 指定パスへのファイル生成・書き込み失敗 |
+| 例外クラス         | 発生条件                |
+|---------------|---------------------|
+| `IOException` | 指定パスへのファイル生成・書き込み失敗 |
 
 ---
 
