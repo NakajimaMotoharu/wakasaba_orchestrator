@@ -65,12 +65,12 @@
 
 ## 例外要件
 
-| メソッド名     | 例外クラス                  | 想定発生状況                                                                             |
-|-----------|------------------------|------------------------------------------------------------------------------------|
-| `isAlive` | `JSchException`        | セッション生成失敗（秘密鍵読込エラー等）。`session.connect()` が投げる `JSchException` はすべて吸収して `false` を返す |
-| `execute` | `JSchException`        | SSH接続・チャンネル接続失敗                                                                    |
-| `execute` | `IOException`          | 標準出力の読み取り失敗                                                                        |
-| `execute` | `InterruptedException` | `Thread.sleep` 中の割り込み                                                              |
+| メソッド名     | 例外クラス                  | 想定発生状況                                                                                                                                          |
+|-----------|------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|
+| `isAlive` | `JSchException`        | `getSessionInstance()` 内での `JSchException`（秘密鍵読込エラー等、セッション生成に起因するもの）は吸収せず呼び出し元へ伝播する。`session.connect()` が投げる `JSchException` のみを吸収し `false` を返す |
+| `execute` | `JSchException`        | SSH接続・チャンネル接続失敗                                                                                                                                 |
+| `execute` | `IOException`          | 標準出力の読み取り失敗                                                                                                                                     |
+| `execute` | `InterruptedException` | `Thread.sleep` 中の割り込み                                                                                                                           |
 
 ---
 
