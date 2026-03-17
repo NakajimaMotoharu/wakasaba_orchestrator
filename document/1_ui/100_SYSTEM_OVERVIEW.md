@@ -151,17 +151,16 @@ main(args)
 
 - 各クラスの業務メソッドは検査例外を `throws` で上位へ委譲する。個別の `try-catch` による回復処理は行わない。
 - 全例外は最終的に `Main.main` まで伝播し、JVM がスタックトレースを標準エラーへ出力して終了する。
-- `SshExec.isAlive()` 内部のみ例外を吸収する。`session.connect()` が投げる `JSchException`（接続不可）を `false`
+- `SshExec.isAlive()` 内部のみ例外を吸収する。`session.connect()` が投げるすべての `JSchException` を `false`
   として返し、再起動中のサーバへのポーリング待機を実現する。
 
-| 例外クラス                            | 主な発生状況                                    |
-|----------------------------------|-------------------------------------------|
-| `IOException`                    | ファイル読込・SSH出力読取・HTTP通信・ログ書込失敗              |
-| `InterruptedException`           | SSH / HTTP 待機中・`process.waitFor()` 中の割り込み |
-| `JSchException`                  | SSH セッション生成・接続・チャンネル接続失敗                  |
-| `FileNotFoundException`          | ログファイル出力先の作成失敗                            |
-| `NumberFormatException`（非検査）     | 接続情報ファイルのポート番号が整数でない                      |
-| `IndexOutOfBoundsException`（非検査） | 接続情報ファイルの行数が4行未満                          |
+| 例外クラス                            | 主な発生状況                                                |
+|----------------------------------|-------------------------------------------------------|
+| `IOException`                    | ファイル読込・SSH出力読取・HTTP通信・ログ書込失敗・ログ出力先ディレクトリ不在またはファイル生成失敗 |
+| `InterruptedException`           | SSH / HTTP 待機中・`process.waitFor()` 中の割り込み             |
+| `JSchException`                  | SSH セッション生成・接続・チャンネル接続失敗                              |
+| `NumberFormatException`（非検査）     | 接続情報ファイルのポート番号が整数でない                                  |
+| `IndexOutOfBoundsException`（非検査） | 接続情報ファイルの行数が4行未満                                      |
 
 ---
 

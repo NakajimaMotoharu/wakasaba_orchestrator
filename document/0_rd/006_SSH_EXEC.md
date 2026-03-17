@@ -34,8 +34,7 @@
 
 - 対象サーバへのSSH接続が可能かどうかを `boolean` で返せること。
 - 接続成功時は `session.disconnect()` 後に `true` を返すこと。
-- `session.connect()` の失敗（接続不可）に起因する `JSchException` は例外を吸収し `false`
-  を返すこと。これにより再起動中のサーバへのポーリング待機が実現されること。
+- `session.connect()` が投げるすべての `JSchException` を吸収し `false` を返すこと。これにより再起動中のサーバへのポーリング待機が実現されること。
 - `getSessionInstance()` 内での `JSchException`（秘密鍵読込エラー等、セッション生成に起因するもの）は吸収せず呼び出し元へ伝播させること。
 
 ---
@@ -66,12 +65,12 @@
 
 ## 例外要件
 
-| メソッド名     | 例外クラス                  | 想定発生状況                                                          |
-|-----------|------------------------|-----------------------------------------------------------------|
-| `isAlive` | `JSchException`        | セッション生成失敗（秘密鍵読込エラー等）。`session.connect()` の接続失敗は吸収して `false` を返す |
-| `execute` | `JSchException`        | SSH接続・チャンネル接続失敗                                                 |
-| `execute` | `IOException`          | 標準出力の読み取り失敗                                                     |
-| `execute` | `InterruptedException` | `Thread.sleep` 中の割り込み                                           |
+| メソッド名     | 例外クラス                  | 想定発生状況                                                                             |
+|-----------|------------------------|------------------------------------------------------------------------------------|
+| `isAlive` | `JSchException`        | セッション生成失敗（秘密鍵読込エラー等）。`session.connect()` が投げる `JSchException` はすべて吸収して `false` を返す |
+| `execute` | `JSchException`        | SSH接続・チャンネル接続失敗                                                                    |
+| `execute` | `IOException`          | 標準出力の読み取り失敗                                                                        |
+| `execute` | `InterruptedException` | `Thread.sleep` 中の割り込み                                                              |
 
 ---
 
@@ -79,6 +78,6 @@
 
 - `executed` フラグにより、同一インスタンスで `execute()` を2回呼ぶことはできない。再実行が必要な場合は新しいインスタンスを生成すること。
 - `StrictHostKeyChecking=no` を設定するため、known_hosts の検証は行わない。これは再起動後のサーバへの接続を確実に行うための設計上の判断である。
-- `isAlive()` での例外吸収は `session.connect()` が投げる `JSchException`（SSH接続不可）のみを対象とする。
-  `getSessionInstance()` 内での `JSchException`（秘密鍵読込失敗等）はこれとは異なり、上位へ伝播させること。
+- `isAlive()` での例外吸収は `session.connect()` が投げるすべての `JSchException` を対象とする。`getSessionInstance()`
+  内での `JSchException`（秘密鍵読込失敗等）は上位へ伝播させること。
 - 標準出力の読み取りには文字コード UTF-8 を使用すること。
