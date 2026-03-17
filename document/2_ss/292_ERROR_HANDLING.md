@@ -17,20 +17,19 @@
 
 ### 検査例外（Checked Exception）
 
-| 例外クラス                   | 主な発生箇所                                | 原因                         |
-|-------------------------|---------------------------------------|----------------------------|
-| `IOException`           | `ConnectionInformation.getCiFromFile` | 接続情報ファイルの読み込み失敗            |
-| `IOException`           | `SshExec.execute`                     | SSH標準出力の読み取り失敗             |
-| `IOException`           | `BashExec.runCommand`                 | ローカルプロセスの起動・出力読み取り失敗       |
-| `IOException`           | `Curl.exec`                           | HTTPリクエストのネットワーク障害         |
-| `IOException`           | `Main.outLog`                         | ログファイルへの書き込み失敗             |
-| `InterruptedException`  | `SshExec.execute`                     | SSH待機中の割り込み                |
-| `InterruptedException`  | `SshCommand.waitForBecomeActive`      | ポーリングスリープ中の割り込み            |
-| `InterruptedException`  | `BashExec.runCommand`                 | `process.waitFor()` 中の割り込み |
-| `InterruptedException`  | `Curl.exec`                           | HTTPリクエスト待機中の割り込み          |
-| `JSchException`         | `SshExec.isAlive`                     | SSH接続テスト失敗（セッション生成エラー）     |
-| `JSchException`         | `SshExec.execute`                     | SSH接続・チャンネル接続失敗            |
-| `FileNotFoundException` | `Main.outLog`                         | ログ出力ファイルの作成失敗              |
+| 例外クラス                  | 主な発生箇所                                | 原因                                                                           |
+|------------------------|---------------------------------------|------------------------------------------------------------------------------|
+| `IOException`          | `ConnectionInformation.getCiFromFile` | 接続情報ファイルの読み込み失敗                                                              |
+| `IOException`          | `SshExec.execute`                     | SSH標準出力の読み取り失敗                                                               |
+| `IOException`          | `BashExec.runCommand`                 | ローカルプロセスの起動・出力読み取り失敗                                                         |
+| `IOException`          | `Curl.exec`                           | HTTPリクエストのネットワーク障害                                                           |
+| `IOException`          | `Main.outLog`                         | ログファイルへの書き込み失敗・出力先ディレクトリ不在またはファイル生成失敗                                        |
+| `InterruptedException` | `SshExec.execute`                     | SSH待機中の割り込み                                                                  |
+| `InterruptedException` | `SshCommand.waitForBecomeActive`      | ポーリングスリープ中の割り込み                                                              |
+| `InterruptedException` | `BashExec.runCommand`                 | `process.waitFor()` 中の割り込み                                                   |
+| `InterruptedException` | `Curl.exec`                           | HTTPリクエスト待機中の割り込み                                                            |
+| `JSchException`        | `SshExec.isAlive`                     | SSHセッション生成エラー。`session.connect()` が投げるすべての `JSchException` を吸収して `false` を返す |
+| `JSchException`        | `SshExec.execute`                     | SSH接続・チャンネル接続失敗                                                              |
 
 ### 非検査例外（Unchecked Exception）
 
@@ -57,7 +56,7 @@
 ## 特例：`SshExec.isAlive()` の例外吸収
 
 `SshCommand.waitForBecomeActive()` → `SshExec.isAlive()` の流れにおいて、  
-`session.connect()` が投げる `JSchException`（= 接続不可）は `isAlive()` 内で `false` として吸収される。
+`session.connect()` が投げるすべての `JSchException` は `isAlive()` 内で `false` として吸収される。
 
 ```java
 public class SshExec {
@@ -74,7 +73,7 @@ public class SshExec {
 ```
 
 これにより `shutdown` 後の再起動待ちがポーリングで実現される。  
-ただし、秘密鍵ファイル読み込みエラー等のセッション生成に起因する `JSchException` は吸収されず上位に伝播する。
+なお、`getSessionInstance()` 内での `JSchException`（秘密鍵読込失敗等）は吸収されず上位に伝播する。
 
 ---
 
@@ -86,7 +85,7 @@ public class SshExec {
 |------------------------|--------------------------------------------------------|
 | `main` に渡す引数が3つ未満      | `System.out` にUSAGEメッセージを出力して終了。ログファイルは生成されない          |
 | 処理途中で例外が発生             | `log` への追記は途中まで行われているが、`outLog()` に到達しないためファイルに書き出されない |
-| ログファイルの出力先ディレクトリが存在しない | `FileNotFoundException` が発生してJVMが終了                    |
+| ログファイルの出力先ディレクトリが存在しない | `IOException` が発生してJVMが終了                              |
 
 ---
 
