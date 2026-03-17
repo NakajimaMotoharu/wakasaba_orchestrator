@@ -65,12 +65,12 @@ args.length == 3 ?
 
 ## 例外
 
-| メソッド名    | 例外クラス                   | 発生条件                      |
-|----------|-------------------------|---------------------------|
-| `main`   | `IOException`           | サーバファイル読込失敗、またはログファイル書込失敗 |
-| `main`   | `InterruptedException`  | SSH コマンド実行中の割り込み          |
-| `main`   | `JSchException`         | SSH 接続・実行失敗               |
-| `outLog` | `FileNotFoundException` | 指定パスへのファイル生成・書込失敗         |
+| メソッド名    | 例外クラス                  | 発生条件                      |
+|----------|------------------------|---------------------------|
+| `main`   | `IOException`          | サーバファイル読込失敗、またはログファイル書込失敗 |
+| `main`   | `InterruptedException` | SSH コマンド実行中の割り込み          |
+| `main`   | `JSchException`        | SSH 接続・実行失敗               |
+| `outLog` | `IOException`          | 指定パスへのファイル生成・書込失敗         |
 
 ---
 
