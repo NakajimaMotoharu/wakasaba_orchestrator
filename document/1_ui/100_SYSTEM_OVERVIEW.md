@@ -16,16 +16,16 @@
 
 ## システム概要
 
-| 項目       | 内容                                                                                                  |
-|----------|-----------------------------------------------------------------------------------------------------|
-| システム名    | wakasaba_orchestrator                                                                               |
-| 目的       | 複数のLinuxサーバに対して定型メンテナンス処理（OS更新・PaperMCサーバ更新・バックアップ等）を自動実行するオーケストレーションバッチ                            |
-| 実行環境     | Java 17 以上（Record を使用）/ Gradle ビルド                                                                  |
-| 実行形式     | Fat JAR（Shadow JAR）によるコマンドライン実行                                                                     |
-| エントリポイント | `com.wks.main.Main`                                                                                 |
-| 対象サーバ構成  | リモートサーバ3台（SSH接続）＋自サーバ1台（ローカル実行）                                                                     |
-| ビルドツール   | Gradle / Shadow Plugin 9.3.2                                                                        |
-| 実行コマンド例  | `java -jar wakasaba_orchestrator-1.0-SNAPSHOT-all.jar <server0_file> <server1_file> <server2_file>` |
+| 項目       | 内容                                                                                                         |
+|----------|------------------------------------------------------------------------------------------------------------|
+| システム名    | wakasaba_orchestrator                                                                                      |
+| 目的       | 複数のLinuxサーバに対して定型メンテナンス処理（OS更新・PaperMCサーバ更新・バックアップ等）を自動実行するオーケストレーションバッチ                                   |
+| 実行環境     | Java 21 以上（`SequencedCollection`（`List.getFirst()` 等）および `HttpClient` の `AutoCloseable` 対応を使用）/ Gradle ビルド |
+| 実行形式     | Fat JAR（Shadow JAR）によるコマンドライン実行                                                                            |
+| エントリポイント | `com.wks.main.Main`                                                                                        |
+| 対象サーバ構成  | リモートサーバ3台（SSH接続）＋自サーバ1台（ローカル実行）                                                                            |
+| ビルドツール   | Gradle / Shadow Plugin 9.3.2                                                                               |
+| 実行コマンド例  | `java -jar wakasaba_orchestrator-1.0-SNAPSHOT-all.jar <server0_file> <server1_file> <server2_file>`        |
 
 ---
 
