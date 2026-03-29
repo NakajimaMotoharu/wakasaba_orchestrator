@@ -46,8 +46,10 @@ public class WksConstants {
 	public static final String CMD_PAPERMC_BACKUP = "sh " + PATH_BACKUP_SHELL;
 	/** 何もしないコマンド */
 	public static final String CMD_DO_NOTHING = ":";
+	/** 1分間待機するコマンド */
+	public static final String CMD_WAIT_ONE_MIN = "sleep 60";
 	/** スリープ後再起動コマンド */
-	public static final String CMD_SLEEP_SHUTDOWN = "(sleep 60 && sudo shutdown -r now) &";
+	public static final String CMD_SLEEP_SHUTDOWN = "(" + CMD_WAIT_ONE_MIN + " && sudo shutdown -r now) &";
 	/** シェル実行コマンド */
 	public static final String CMD_SHELL_HEAD = "sh";
 	/** シェル実行オプション */
