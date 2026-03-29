@@ -268,6 +268,19 @@ public class SshCommand {
 	}
 
 	/**
+	 * 1分間待機するコマンドの実行
+	 *
+	 * @param ci サーバ情報
+	 * @throws JSchException SSHコマンド実行に失敗
+	 * @throws InterruptedException SSHコマンド実行に失敗
+	 * @throws IOException SSHコマンド標準出力取得に失敗
+	 */
+	public static void waitOneMin(ConnectionInformation ci) throws JSchException, IOException, InterruptedException {
+		// 1分間待機するコマンドの実行
+		runCommand(ci, WksConstants.CMD_WAIT_ONE_MIN);
+	}
+
+	/**
 	 * PaperMCバックアップシェルの実行
 	 *
 	 * @param ci サーバ情報

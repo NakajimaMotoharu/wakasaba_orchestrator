@@ -1,11 +1,12 @@
 package com.wks.main;
 
-import com.jcraft.jsch.JSchException;
 import com.wks.parts.WksConstants;
 import com.wks.workflow.WksWorkFlow;
 
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -24,16 +25,26 @@ public class Main {
 	 *
 	 * @param args 3つ要求(すべてサーバの接続用データ)
 	 * @throws IOException サーバファイル読み込み失敗、あるいはログファイル書き込み失敗
-	 * @throws InterruptedException SSHコマンド実行中に失敗
-	 * @throws JSchException SSHコマンド実行中に失敗
 	 */
-	public static void main(String[] args) throws IOException, InterruptedException, JSchException {
+	public static void main(String[] args) throws IOException {
 		if (args.length == 3){
 			// 引数が3つあるとき正常実行開始
 			// 開始ログ書き込み
 			log.add(String.format(WksConstants.LOG_START_TIME, getDateTime()));
-			// ワークフローに従い各サーバにアクセス・処理実行
-			WksWorkFlow.execScheduledJob(args);
+
+			try {
+				// ワークフローに従い各サーバにアクセス・処理実行
+				WksWorkFlow.execScheduledJob(args);
+			} catch (Exception e){
+				// メモリ上に文字列を書き込むためのバッファ作成
+				StringWriter sw = new StringWriter();
+				// StringWriterに書き込むためのPrintWriterを作成
+				PrintWriter pw = new PrintWriter(sw);
+				// スタックトレースをPrintWriterへ出力
+				e.printStackTrace(pw);
+				// StringWriterに溜まった内容を1つの文字列として取得、ログへ追記
+				log.add(sw.toString());
+			}
 			// 終了ログ書き込み
 			log.add(String.format(WksConstants.LOG_END_TIME, getDateTime()));
 			// ログファイル出力
