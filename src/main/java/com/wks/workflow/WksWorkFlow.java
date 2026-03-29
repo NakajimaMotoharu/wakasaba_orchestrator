@@ -45,6 +45,8 @@ public class WksWorkFlow {
 		log.add(String.format(WksConstants.LOG_SPLIT, ci2));
 		// PaperMC停止コマンドの実行
 		SshCommand.stopPaperMC(ci2);
+		// 安全停止のため1分間待機
+		SshCommand.waitOneMin(ci2);
 		// updateコマンドの実行
 		SshCommand.update(ci2);
 		// upgradeコマンドの実行
