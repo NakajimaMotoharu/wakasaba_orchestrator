@@ -28,6 +28,9 @@
 | `upgrade`             | `void` | `public static`  | `sudo apt upgrade -y` を実行する                 |
 | `shutdown`            | `void` | `public static`  | `sudo shutdown -r now` を実行する                |
 | `stopPaperMC`         | `void` | `public static`  | `sudo systemctl stop papermc` を実行する         |
+| `waitOneMin`          | `void` | `public static`  | `sleep 60` を実行する                            |
+| `startSchubert`       | `void` | `public static`  | Schubert起動シェルを実行する                          |
+| `stopSchubert`        | `void` | `public static`  | Schubert停止シェルを実行する                          |
 | `startPaperMC`        | `void` | `public static`  | `sudo systemctl start papermc` を実行する        |
 | `backupPaperMC`       | `void` | `public static`  | バックアップシェルスクリプトを実行する                         |
 | `wgetPaperMc`         | `void` | `public static`  | PaperMC・Pl3xMap の最新版 JAR をリモートサーバ上にダウンロードする |
@@ -39,7 +42,8 @@
 
 ## 処理フロー
 
-### `update` / `upgrade` / `shutdown` / `stopPaperMC` / `startPaperMC` / `backupPaperMC`
+### `update` / `upgrade` / `shutdown` / `stopPaperMC` / `waitOneMin` / `startPaperMC` / `startSchubert` /
+`stopSchubert` / `backupPaperMC`
 
 各メソッドは対応する定数コマンドを引数として `runCommand(ci, コマンド定数)` を呼び出す単純なラッパー。
 
@@ -49,6 +53,9 @@
 | `upgrade`       | `CMD_UPGRADE`        |
 | `shutdown`      | `CMD_SHUTDOWN`       |
 | `stopPaperMC`   | `CMD_PAPERMC_END`    |
+| `waitOneMin`    | `CMD_WAIT_ONE_MIN`   |
+| `startSchubert` | `CMD_SCHUBERT_START` |
+| `stopSchubert`  | `CMD_SCHUBERT_END`   |
 | `startPaperMC`  | `CMD_PAPERMC_START`  |
 | `backupPaperMC` | `CMD_PAPERMC_BACKUP` |
 

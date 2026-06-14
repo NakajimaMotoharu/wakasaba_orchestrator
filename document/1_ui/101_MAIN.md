@@ -35,12 +35,16 @@
 ### `main(String[] args)`
 
 ```
-args.length == 3 ?
+args.length == 4 ?
   Yes:
     1. log に開始時刻を追記（LOG_START_TIME フォーマット）
-    2. WksWorkFlow.execScheduledJob(args) を呼び出す
-    3. log に終了時刻を追記（LOG_END_TIME フォーマット）
-    4. outLog(PATH_EXEC_LOG にタイムスタンプを埋め込んだパス) を呼び出す
+    2. try 内で WksWorkFlow.execScheduledJob(args) を呼び出す
+       例外発生時:
+         catch (Exception e) で捕捉
+         StringWriter + PrintWriter でスタックトレースを文字列化
+         log にスタックトレースを追記
+    3. 正常・異常終了にかかわらず log に終了時刻を追記（LOG_END_TIME フォーマット）
+    4. 正常・異常終了にかかわらず outLog(PATH_EXEC_LOG にタイムスタンプを埋め込んだパス) を呼び出す
   No:
     System.out.println(OTHER_ARGS_MSG) を出力して終了
 ```
@@ -65,12 +69,10 @@ args.length == 3 ?
 
 ## 例外
 
-| メソッド名    | 例外クラス                  | 発生条件                      |
-|----------|------------------------|---------------------------|
-| `main`   | `IOException`          | サーバファイル読込失敗、またはログファイル書込失敗 |
-| `main`   | `InterruptedException` | SSH コマンド実行中の割り込み          |
-| `main`   | `JSchException`        | SSH 接続・実行失敗               |
-| `outLog` | `IOException`          | 指定パスへのファイル生成・書込失敗         |
+| メソッド名    | 例外クラス         | 発生条件              |
+|----------|---------------|-------------------|
+| `main`   | `IOException` | ログファイル書込失敗        |
+| `outLog` | `IOException` | 指定パスへのファイル生成・書込失敗 |
 
 ---
 
@@ -78,5 +80,6 @@ args.length == 3 ?
 
 - `log` は `public static final` であるため、クラスロード時に1度だけ初期化される。各クラスは同一リストを参照することで、アプリケーション全体のログを一元管理する。
 - ログファイルのファイル名には `outLog` 呼出し時点（終了後）の `getDateTime()` 値を使用するため、ファイル名は終了時刻を示す。
-- 例外はすべて `throws` で上位（JVM）に委譲する。`main` 内での個別回復処理は行わない。
-- 処理途中で例外が発生した場合、`outLog()` に到達しないためログファイルは生成されない。
+- ワークフロー実行中の例外は `main` の `catch (Exception e)` で捕捉し、スタックトレースを `log` に追記する。
+- ワークフローの正常・異常終了にかかわらず終了時刻を記録し、`outLog()` を呼び出す。
+- `outLog()` 自身の `IOException` は捕捉せず、`main` の `throws IOException` によりJVMへ伝播する。

@@ -42,10 +42,10 @@
 
 ```java
 public class Main {
-	public static void main(String[] args) throws IOException {
-		// ワークフローに従い各サーバにアクセス・処理実行
-		WksWorkFlow.execScheduledJob(args);
-	}
+    public static void main(String[] args) throws IOException {
+        // ワークフローに従い各サーバにアクセス・処理実行
+        WksWorkFlow.execScheduledJob(args);
+    }
 }
 ```
 
@@ -53,21 +53,21 @@ public class Main {
 
 ```java
 public class Main {
-	public static void main(String[] args) throws IOException {
-		try {
-			// ワークフローに従い各サーバにアクセス・処理実行
-			WksWorkFlow.execScheduledJob(args);
-		} catch (Exception e) {
-			// メモリ上に文字列を書き込むためのバッファ作成
-			StringWriter sw = new StringWriter();
-			// StringWriterに書き込むためのPrintWriterを作成
-			PrintWriter pw = new PrintWriter(sw);
-			// スタックトレースをPrintWriterへ出力
-			e.printStackTrace(pw);
-			// StringWriterに溜まった内容を1つの文字列として取得、ログへ追記
-			log.add(sw.toString());
-		}
-	}
+    public static void main(String[] args) throws IOException {
+        try {
+            // ワークフローに従い各サーバにアクセス・処理実行
+            WksWorkFlow.execScheduledJob(args);
+        } catch (Exception e) {
+            // メモリ上に文字列を書き込むためのバッファ作成
+            StringWriter sw = new StringWriter();
+            // StringWriterに書き込むためのPrintWriterを作成
+            PrintWriter pw = new PrintWriter(sw);
+            // スタックトレースをPrintWriterへ出力
+            e.printStackTrace(pw);
+            // StringWriterに溜まった内容を1つの文字列として取得、ログへ追記
+            log.add(sw.toString());
+        }
+    }
 }
 ```
 
@@ -103,7 +103,7 @@ public class Main {
 ## 例外処理フロー（変更後）
 
 ```
-main(args) ← args.length == 3
+main(args) ← args.length == 4
   │
   ├─ log に開始時刻を追記
   │
@@ -124,29 +124,24 @@ main(args) ← args.length == 3
 
 ## 影響範囲
 
-| 対象             | 影響                                                  |
-|----------------|-----------------------------------------------------|
-| `Main.main`    | `execScheduledJob` 呼び出しを try-catch で囲むよう変更          |
-| `WksWorkFlow`  | 変更なし（`throws` 宣言はそのまま維持）                            |
-| `SshCommand`   | 変更なし                                                |
-| `WksConstants` | 変更なし                                                |
-| ログファイル出力仕様     | 例外発生時もログファイルが生成されるよう動作変更                            |
-| 既存ドキュメント（要更新）  | `001_MAIN.md`、`101_MAIN.md`、`092_ERROR_HANDLING.md` |
+| 対象             | 影響                                         |
+|----------------|--------------------------------------------|
+| `Main.main`    | `execScheduledJob` 呼び出しを try-catch で囲むよう変更 |
+| `WksWorkFlow`  | 変更なし（`throws` 宣言はそのまま維持）                   |
+| `SshCommand`   | 変更なし                                       |
+| `WksConstants` | 変更なし                                       |
+| ログファイル出力仕様     | 例外発生時もログファイルが生成されるよう動作変更                   |
+| 既存ドキュメント       | 要件定義・基本設計・詳細設計へ反映済み                        |
 
 ---
 
-## ドキュメント更新要否
+## ドキュメント更新結果
 
-| ドキュメント                       | 更新箇所（概要）                                                                                   |
-|------------------------------|--------------------------------------------------------------------------------------------|
-| `0_rd/001_MAIN.md`           | MN-03：`execScheduledJob` 呼び出しを try-catch で囲む旨を追記                                           |
-|                              | MN-04：例外発生時もログファイルが生成される旨に記述変更                                                             |
-|                              | 例外要件テーブル：`main` の `throws` 宣言から `JSchException`・`InterruptedException` を除外（catch で吸収されるため） |
-|                              | 制約・注意事項：「例外発生時にログファイルは生成されない」の記述を削除                                                        |
-| `1_ui/101_MAIN.md`           | 処理フロー図：`execScheduledJob` 呼び出し部分に try-catch ブロックを追加                                        |
-|                              | 設計上の注意点：ログファイル未生成ケースの記述を変更                                                                 |
-| `0_rd/092_ERROR_HANDLING.md` | 例外伝播経路：`Main.main` での catch を反映した経路図に更新                                                    |
-|                              | ログ未出力ケーステーブル：「処理途中で例外が発生」行の記述を変更                                                           |
+| ドキュメント群                                                                                   | 更新内容                                            |
+|-------------------------------------------------------------------------------------------|-------------------------------------------------|
+| `0_rd/001_MAIN.md`、`1_ui/101_MAIN.md`、`2_ss/201_Main.md`                                  | `Main.main` の try-catch、スタックトレース記録、例外宣言を現行実装へ更新 |
+| `0_rd/092_ERROR_HANDLING.md`、`1_ui/192_ERROR_HANDLING.md`、`2_ss/292_ERROR_HANDLING.md`    | 例外伝播経路とログ出力条件を現行実装へ更新                           |
+| `0_rd/000_SYSTEM_OVERVIEW.md`、`1_ui/100_SYSTEM_OVERVIEW.md`、`2_ss/200_SYSTEM_OVERVIEW.md` | 全体フロー、例外処理方針、ログ仕様へ反映                            |
 
 ---
 

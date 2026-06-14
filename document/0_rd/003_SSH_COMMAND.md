@@ -78,6 +78,18 @@
 - 待機はポーリング（1秒間隔での接続試行）によって実現すること。
 - これにより、サーバ再起動後の後続コマンドも自動的に正常実行できること。
 
+### SC-10：固定60秒待機コマンドの実行
+
+- `sleep 60` を対象サーバ上で実行できること。
+- 実行コマンドをグローバルログへ記録すること。
+- PaperMC停止後の安全停止待機として `WksWorkFlow` から利用できること。
+
+### SC-11：Schubertシステムの停止・起動
+
+- `sh /home/mini/schubert/stop_schubert.sh` を対象サーバ上で実行できること。
+- `sh /home/mini/schubert/start_schubert.sh` を対象サーバ上で実行できること。
+- 両コマンドの実行前にSSH疎通確認を行い、実行コマンドおよび標準出力をグローバルログへ記録すること。
+
 ---
 
 ## 要求インタフェース
@@ -96,6 +108,9 @@
 | `upgrade`             | `void` | `public static`  | `CMD_UPGRADE` を引数に `runCommand` を呼び出すラッパー        |
 | `shutdown`            | `void` | `public static`  | `CMD_SHUTDOWN` を引数に `runCommand` を呼び出すラッパー       |
 | `stopPaperMC`         | `void` | `public static`  | `CMD_PAPERMC_END` を引数に `runCommand` を呼び出すラッパー    |
+| `waitOneMin`          | `void` | `public static`  | `CMD_WAIT_ONE_MIN` を引数に `runCommand` を呼び出すラッパー   |
+| `startSchubert`       | `void` | `public static`  | `CMD_SCHUBERT_START` を引数に `runCommand` を呼び出すラッパー |
+| `stopSchubert`        | `void` | `public static`  | `CMD_SCHUBERT_END` を引数に `runCommand` を呼び出すラッパー   |
 | `startPaperMC`        | `void` | `public static`  | `CMD_PAPERMC_START` を引数に `runCommand` を呼び出すラッパー  |
 | `backupPaperMC`       | `void` | `public static`  | `CMD_PAPERMC_BACKUP` を引数に `runCommand` を呼び出すラッパー |
 | `wgetPaperMc`         | `void` | `public static`  | PaperMC/Pl3xMap JARをリモートサーバへダウンロードする             |

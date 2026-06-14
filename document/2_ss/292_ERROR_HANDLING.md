@@ -8,8 +8,10 @@
 
 ## 基本方針
 
-本アプリケーションは**例外を `main` メソッドまでそのまま伝播させ、JVMに処理を委ねる**設計となっている。  
-各業務メソッドでは個別の `try-catch` による回復処理を行わず、すべての例外を `throws` で上位に委譲する。
+各業務メソッドでは個別の回復処理を行わず、例外を `WksWorkFlow.execScheduledJob` から `Main.main` まで伝播させる。  
+`Main.main` はワークフロー実行を `try-catch` で囲み、`Exception`
+を捕捉してスタックトレースをログへ保存した後、終了時刻記録とログファイル出力を行う。  
+ただし、`Main.outLog` が送出する `IOException` は `main` で捕捉されずJVMへ伝播する。
 
 ---
 
@@ -48,7 +50,15 @@
 各ユーティリティクラス
   └─► SshCommand / BashExec
         └─► WksWorkFlow.execScheduledJob
-              └─► Main.main  ← ここでJVMが例外をキャッチしスタックトレースを出力
+              └─► Main.main
+                    ├─ catch (Exception e)
+                    ├─ StringWriter + PrintWriter でスタックトレースを文字列化
+                    ├─ Main.log にスタックトレースと終了時刻を追記
+                    └─ outLog() でログファイル出力
+
+Main.outLog の IOException
+  └─► Main.main の throws IOException
+        └─► JVM
 ```
 
 ---
@@ -60,15 +70,15 @@
 
 ```java
 public class SshExec {
-	public boolean isAlive() throws JSchException {
-		// 略
-		try {
-			session.connect();
-		} catch (JSchException e) {
-			return false;  // 接続失敗 = サーバ未応答として扱う
-		}
-		// 略
-	}
+    public boolean isAlive() throws JSchException {
+        // 略
+        try {
+            session.connect();
+        } catch (JSchException e) {
+            return false;  // 接続失敗 = サーバ未応答として扱う
+        }
+        // 略
+    }
 }
 ```
 
@@ -81,17 +91,16 @@ public class SshExec {
 
 以下の状況ではログファイルが出力されない（または不完全になる）。
 
-| 状況                     | 結果                                                     |
-|------------------------|--------------------------------------------------------|
-| `main` に渡す引数が3つ未満      | `System.out` にUSAGEメッセージを出力して終了。ログファイルは生成されない          |
-| 処理途中で例外が発生             | `log` への追記は途中まで行われているが、`outLog()` に到達しないためファイルに書き出されない |
-| ログファイルの出力先ディレクトリが存在しない | `IOException` が発生してJVMが終了                              |
+| 状況                     | 結果                                            |
+|------------------------|-----------------------------------------------|
+| `main` に渡す引数が4つでない     | `System.out` にUSAGEメッセージを出力して終了。ログファイルは生成されない |
+| ワークフロー処理途中で例外が発生       | スタックトレースと終了時刻を追記し、途中までの実行ログとともにログファイルへ出力する    |
+| ログファイルの出力先ディレクトリが存在しない | `IOException` が発生してJVMが終了                     |
 
 ---
 
 ## 改善の余地
 
 - 各処理ステップを `try-catch` で囲み、一部サーバの失敗時に残りのサーバ処理を継続する設計にすることで可用性が向上する。
-- 処理途中で例外が発生した際も `outLog()` が呼ばれるよう `finally` ブロックを活用することで、デバッグ情報の保全が期待できる。
 - `PaperUrlGen` の `JacksonException` / `NullPointerException` に対する明示的なハンドリングを追加することで、APIレスポンス変更時のデバッグが容易になる。
 - `Curl.exec` におけるHTTPステータスコードの検証を追加することで、APIエラー時の原因特定が容易になる。

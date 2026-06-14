@@ -31,6 +31,9 @@
 | `movePaperMc`         | `void` | `public static`  | ダウンロードしたPaperMC・Pl3xMapをSHA検証後に本番ディレクトリへ移動する |
 | `startPaperMC`        | `void` | `public static`  | `sudo systemctl start papermc` を実行する         |
 | `stopPaperMC`         | `void` | `public static`  | `sudo systemctl stop papermc` を実行する          |
+| `waitOneMin`          | `void` | `public static`  | `sleep 60` を実行する                             |
+| `startSchubert`       | `void` | `public static`  | Schubert起動シェルを実行する                           |
+| `stopSchubert`        | `void` | `public static`  | Schubert停止シェルを実行する                           |
 | `backupPaperMC`       | `void` | `public static`  | バックアップシェルを実行する                               |
 | `runCommand`          | `void` | `private static` | 任意コマンドの実行・ログ記録の共通処理                          |
 | `waitForBecomeActive` | `void` | `private static` | 対象サーバが疎通可能になるまでポーリング待機する                     |
@@ -43,7 +46,7 @@
 
 ```java
 public static void update(ConnectionInformation ci)
-		throws JSchException, InterruptedException, IOException;
+        throws JSchException, InterruptedException, IOException;
 ```
 
 `runCommand(ci, WksConstants.CMD_UPDATE)` を呼び出す単純なラッパー。
@@ -54,7 +57,7 @@ public static void update(ConnectionInformation ci)
 
 ```java
 public static void upgrade(ConnectionInformation ci)
-		throws JSchException, InterruptedException, IOException;
+        throws JSchException, InterruptedException, IOException;
 ```
 
 `runCommand(ci, WksConstants.CMD_UPGRADE)` を呼び出す単純なラッパー。
@@ -65,7 +68,7 @@ public static void upgrade(ConnectionInformation ci)
 
 ```java
 public static void shutdown(ConnectionInformation ci)
-		throws JSchException, InterruptedException, IOException;
+        throws JSchException, InterruptedException, IOException;
 ```
 
 `runCommand(ci, WksConstants.CMD_SHUTDOWN)` を呼び出す単純なラッパー。  
@@ -77,7 +80,7 @@ public static void shutdown(ConnectionInformation ci)
 
 ```java
 public static void wgetPaperMc(ConnectionInformation ci)
-		throws IOException, InterruptedException, JSchException;
+        throws IOException, InterruptedException, JSchException;
 ```
 
 PaperMCおよびPl3xMapの最新版JARファイルをリモートサーバ上にダウンロードする。
@@ -109,7 +112,7 @@ PaperMCおよびPl3xMapの最新版JARファイルをリモートサーバ上に
 
 ```java
 public static void movePaperMc(ConnectionInformation ci)
-		throws IOException, InterruptedException, JSchException;
+        throws IOException, InterruptedException, JSchException;
 ```
 
 ダウンロード済みのPaperMC・Pl3xMap JARファイルをSHAチェックサムで検証し、正常な場合のみ本番ディレクトリへ移動する。
@@ -166,7 +169,7 @@ public static void movePaperMc(ConnectionInformation ci)
 
 ```java
 public static void startPaperMC(ConnectionInformation ci)
-		throws JSchException, InterruptedException, IOException;
+        throws JSchException, InterruptedException, IOException;
 ```
 
 `runCommand(ci, WksConstants.CMD_PAPERMC_START)` を呼び出す単純なラッパー。
@@ -177,10 +180,46 @@ public static void startPaperMC(ConnectionInformation ci)
 
 ```java
 public static void stopPaperMC(ConnectionInformation ci)
-		throws JSchException, InterruptedException, IOException;
+        throws JSchException, InterruptedException, IOException;
 ```
 
 `runCommand(ci, WksConstants.CMD_PAPERMC_END)` を呼び出す単純なラッパー。
+
+---
+
+### `waitOneMin(ConnectionInformation ci)`
+
+```java
+public static void waitOneMin(ConnectionInformation ci)
+        throws JSchException, IOException, InterruptedException;
+```
+
+`runCommand(ci, WksConstants.CMD_WAIT_ONE_MIN)` を呼び出し、対象サーバ上で `sleep 60` を実行する。  
+PaperMC停止後の安全停止待機に使用し、呼び出し元はSSHコマンド完了までブロッキングされる。
+
+---
+
+### `startSchubert(ConnectionInformation ci)`
+
+```java
+public static void startSchubert(ConnectionInformation ci)
+        throws JSchException, InterruptedException, IOException;
+```
+
+`runCommand(ci, WksConstants.CMD_SCHUBERT_START)` を呼び出し、
+`sh /home/mini/schubert/start_schubert.sh` を実行する単純なラッパー。
+
+---
+
+### `stopSchubert(ConnectionInformation ci)`
+
+```java
+public static void stopSchubert(ConnectionInformation ci)
+        throws JSchException, InterruptedException, IOException;
+```
+
+`runCommand(ci, WksConstants.CMD_SCHUBERT_END)` を呼び出し、
+`sh /home/mini/schubert/stop_schubert.sh` を実行する単純なラッパー。
 
 ---
 
@@ -188,7 +227,7 @@ public static void stopPaperMC(ConnectionInformation ci)
 
 ```java
 public static void backupPaperMC(ConnectionInformation ci)
-		throws JSchException, InterruptedException, IOException;
+        throws JSchException, InterruptedException, IOException;
 ```
 
 `runCommand(ci, WksConstants.CMD_PAPERMC_BACKUP)` を呼び出す単純なラッパー。  
@@ -200,10 +239,11 @@ public static void backupPaperMC(ConnectionInformation ci)
 
 ```java
 private static void runCommand(ConnectionInformation ci, String cmd)
-		throws JSchException, InterruptedException, IOException;
+        throws JSchException, InterruptedException, IOException;
 ```
 
-コマンド実行の共通処理。`update`・`upgrade`・`shutdown`・`startPaperMC`・`stopPaperMC`・`backupPaperMC`・`wgetPaperMc`
+コマンド実行の共通処理。`update`・`upgrade`・`shutdown`・`startPaperMC`・`stopPaperMC`・`waitOneMin`・`startSchubert`・
+`stopSchubert`・`backupPaperMC`・`wgetPaperMc`
 から呼ばれる（
 `movePaperMc` は内部で直接 `SshExec` を操作するため、このメソッドを経由しない）。
 
@@ -223,7 +263,7 @@ private static void runCommand(ConnectionInformation ci, String cmd)
 
 ```java
 private static void waitForBecomeActive(ConnectionInformation ci)
-		throws JSchException, InterruptedException;
+        throws JSchException, InterruptedException;
 ```
 
 対象サーバへのSSH接続が成功するまで1秒間隔でポーリングする。  

@@ -17,7 +17,7 @@
 ### 変更前の課題
 
 変更前の実装では、サーバ1（PaperMC サーバ）のワークフローにおいて、
-`SshCommand.stopPaperMC(ci2)` の直後に `SshCommand.update(ci2)` を実行していた。
+`SshCommand.stopPaperMC(ci1)` の直後に `SshCommand.update(ci1)` を実行していた。
 
 `systemctl stop papermc` はデーモン停止命令の発行のみを行うため、
 実際のプロセス終了・ファイルクローズ・セーブデータのフラッシュが完了するまでに
@@ -57,12 +57,12 @@ PaperMC のグレースフルシャットダウンが完了するための十分
 
 ```java
 public class WksWorkFlow {
-	public static void execScheduledJob(String[] servers) throws IOException, InterruptedException, JSchException {
-		// PaperMC停止コマンドの実行
-		SshCommand.stopPaperMC(ci2);
-		// updateコマンドの実行
-		SshCommand.update(ci2);
-	}
+    public static void execScheduledJob(String[] servers) throws IOException, InterruptedException, JSchException {
+        // PaperMC停止コマンドの実行
+        SshCommand.stopPaperMC(ci1);
+        // updateコマンドの実行
+        SshCommand.update(ci1);
+    }
 }
 ```
 
@@ -70,14 +70,14 @@ public class WksWorkFlow {
 
 ```java
 public class WksWorkFlow {
-	public static void execScheduledJob(String[] servers) throws IOException, InterruptedException, JSchException {
-		// PaperMC停止コマンドの実行
-		SshCommand.stopPaperMC(ci2);
-		// 安全停止のため1分間待機
-		SshCommand.waitOneMin(ci2);
-		// updateコマンドの実行
-		SshCommand.update(ci2);
-	}
+    public static void execScheduledJob(String[] servers) throws IOException, InterruptedException, JSchException {
+        // PaperMC停止コマンドの実行
+        SshCommand.stopPaperMC(ci1);
+        // 安全停止のため1分間待機
+        SshCommand.waitOneMin(ci1);
+        // updateコマンドの実行
+        SshCommand.update(ci1);
+    }
 }
 ```
 
@@ -89,15 +89,15 @@ public class WksWorkFlow {
 
 | ステップ | 変更前                  | 変更後                        |
 |------|----------------------|----------------------------|
-| 8    | `stopPaperMC(ci2)`   | `stopPaperMC(ci2)`         |
-| 9    | `update(ci2)` ← 直接移行 | `waitOneMin(ci2)` ← **追加** |
-| 10   | `upgrade(ci2)`       | `update(ci2)`              |
-| 11   | `backupPaperMC(ci2)` | `upgrade(ci2)`             |
-| 12   | `wgetPaperMc(ci2)`   | `backupPaperMC(ci2)`       |
-| 13   | `movePaperMc(ci2)`   | `wgetPaperMc(ci2)`         |
-| 14   | `shutdown(ci2)`      | `movePaperMc(ci2)`         |
-| 15   | `startPaperMC(ci2)`  | `shutdown(ci2)`            |
-| 16   | —                    | `startPaperMC(ci2)`        |
+| 8    | `stopPaperMC(ci1)`   | `stopPaperMC(ci1)`         |
+| 9    | `update(ci1)` ← 直接移行 | `waitOneMin(ci1)` ← **追加** |
+| 10   | `upgrade(ci1)`       | `update(ci1)`              |
+| 11   | `backupPaperMC(ci1)` | `upgrade(ci1)`             |
+| 12   | `wgetPaperMc(ci1)`   | `backupPaperMC(ci1)`       |
+| 13   | `movePaperMc(ci1)`   | `wgetPaperMc(ci1)`         |
+| 14   | `shutdown(ci1)`      | `movePaperMc(ci1)`         |
+| 15   | `startPaperMC(ci1)`  | `shutdown(ci1)`            |
+| 16   | —                    | `startPaperMC(ci1)`        |
 
 ※ステップ番号は `execScheduledJob` 全体での通し番号ではなく、サーバ1処理内の相対順序。
 
@@ -105,8 +105,8 @@ public class WksWorkFlow {
 
 | 観点               | 内容                                                       |
 |------------------|----------------------------------------------------------|
-| 追加待機時間           | 最大 60 秒（`sleep 60` による固定待機）                              |
-| 最悪ケースのバッチ総所要時間   | 変更前 + 60 秒                                               |
+| 追加待機時間           | 60 秒（`sleep 60` による固定待機。SSH接続待機時間は別途発生しうる）               |
+| バッチ総所要時間への影響     | 変更前 + 約60秒（コマンド実行・SSH接続待機時間を除く）                          |
 | `waitOneMin` の実装 | `SshCommand.waitOneMin` → `CMD_WAIT_ONE_MIN`（`sleep 60`） |
 
 ---
@@ -115,41 +115,41 @@ public class WksWorkFlow {
 
 ```
 [サーバ1 (servers[1]) ← PaperMC サーバ]
-  1.  ConnectionInformation.getCiFromFile(servers[1]) → ci2
-  2.  log に ci2 の接続情報を区切りログとして追記
-  3.  SshCommand.stopPaperMC(ci2)     ← PaperMC 停止命令
-  4.  SshCommand.waitOneMin(ci2)      ← 安全停止待機（最大60秒）★追加
-  5.  SshCommand.update(ci2)
-  6.  SshCommand.upgrade(ci2)
-  7.  SshCommand.backupPaperMC(ci2)
-  8.  SshCommand.wgetPaperMc(ci2)
-  9.  SshCommand.movePaperMc(ci2)
-  10. SshCommand.shutdown(ci2)
-  11. SshCommand.startPaperMC(ci2)
+  1.  ConnectionInformation.getCiFromFile(servers[1]) → ci1
+  2.  log に ci1 の接続情報を区切りログとして追記
+  3.  SshCommand.stopPaperMC(ci1)     ← PaperMC 停止命令
+  4.  SshCommand.waitOneMin(ci1)      ← 安全停止待機（固定60秒）★追加
+  5.  SshCommand.update(ci1)
+  6.  SshCommand.upgrade(ci1)
+  7.  SshCommand.backupPaperMC(ci1)
+  8.  SshCommand.wgetPaperMc(ci1)
+  9.  SshCommand.movePaperMc(ci1)
+  10. SshCommand.shutdown(ci1)
+  11. SshCommand.startPaperMC(ci1)
 ```
 
 ---
 
 ## 影響範囲
 
-| 対象                              | 影響                                            |
-|---------------------------------|-----------------------------------------------|
-| `WksWorkFlow.execScheduledJob`  | サーバ1処理内に `waitOneMin` 呼び出しを1件追加               |
-| `SshCommand.waitOneMin`         | 変更なし（既存メソッドをそのまま使用）                           |
-| `WksConstants.CMD_WAIT_ONE_MIN` | 変更なし（`sleep 60` のまま）                          |
-| サーバ0・サーバ2・自サーバの処理               | 変更なし                                          |
-| 既存ドキュメント（要更新）                   | `002_WKS_WORK_FLOW.md`、`102_WKS_WORK_FLOW.md` |
+| 対象                              | 影響                              |
+|---------------------------------|---------------------------------|
+| `WksWorkFlow.execScheduledJob`  | サーバ1処理内に `waitOneMin` 呼び出しを1件追加 |
+| `SshCommand.waitOneMin`         | 変更なし（既存メソッドをそのまま使用）             |
+| `WksConstants.CMD_WAIT_ONE_MIN` | 変更なし（`sleep 60` のまま）            |
+| サーバ0・サーバ2・自サーバの処理               | 変更なし                            |
+| 既存ドキュメント                        | 要件定義・基本設計・詳細設計へ反映済み             |
 
 ---
 
-## ドキュメント更新要否
+## ドキュメント更新結果
 
-| ドキュメント                      | 更新箇所（概要）                                                               |
-|-----------------------------|------------------------------------------------------------------------|
-| `0_rd/002_WKS_WORK_FLOW.md` | WF-03 のステップ一覧：ステップ3（`stopPaperMC`）とステップ4（`update`）の間に `waitOneMin` を追加 |
-|                             | 制約・注意事項：1分待機の設計根拠（安全停止確認・異常停止時の継続方針）を追記                                |
-| `1_ui/102_WKS_WORK_FLOW.md` | 処理フロー図（サーバ1ブロック）：ステップ8（`stopPaperMC`）直後に `waitOneMin` を追加              |
-|                             | 各対象の役割と処理内容テーブル（サーバ1行）：「PaperMC 停止 → **1分待機** → OS 更新 → ...」に更新        |
+| ドキュメント群                                                                            | 更新内容                             |
+|------------------------------------------------------------------------------------|----------------------------------|
+| `0_rd/002_WKS_WORK_FLOW.md`、`1_ui/102_WKS_WORK_FLOW.md`、`2_ss/202_WksWorkFlow.md`  | サーバ1の処理順序、固定60秒待機の設計意図・継続方針を反映   |
+| `0_rd/003_SSH_COMMAND.md`、`1_ui/103_SSH_COMMAND.md`、`2_ss/203_SshCommand.md`       | `waitOneMin` の要求・インタフェース・詳細設計を追記 |
+| `0_rd/009_WKS_CONSTANTS.md`、`1_ui/109_WKS_CONSTANTS.md`、`2_ss/209_WksConstants.md` | `CMD_WAIT_ONE_MIN` を定数一覧へ追記      |
+| 各階層のシステム概要・接続情報ファイル仕様                                                              | サーバ1の処理概要へPaperMC停止後の60秒待機を反映    |
 
 ---
 
