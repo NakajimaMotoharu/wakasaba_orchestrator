@@ -26,6 +26,18 @@ public class WksConstants {
      * バックアップ処理シェル格納パス
      */
     public static final String PATH_BACKUP_SHELL = "/home/mini/mcs/shell/backup.sh";
+    /**
+     * Schubertアプリ格納パス
+     */
+    public static final String PATH_PROD_SCHUBERT_APP = "/home/mini/schubert/";
+    /**
+     * Schubert起動シェルパス
+     */
+    public static final String PATH_PROD_SCHUBERT_START_SHELL = PATH_PROD_SCHUBERT_APP + "start_schubert.sh";
+    /**
+     * Schubert停止シェルパス
+     */
+    public static final String PATH_PROD_SCHUBERT_STOP_SHELL = PATH_PROD_SCHUBERT_APP + "stop_schubert.sh";
 
     // Linuxコマンド
     /**
@@ -84,6 +96,14 @@ public class WksConstants {
      * バックアップシェル実行コマンド
      */
     public static final String CMD_PAPERMC_BACKUP = "sh " + PATH_BACKUP_SHELL;
+    /**
+     * Schubert起動コマンド
+     */
+    public static final String CMD_SCHUBERT_START = "sh " + PATH_PROD_SCHUBERT_START_SHELL;
+    /**
+     * Schubert停止コマンド
+     */
+    public static final String CMD_SCHUBERT_END = "sh " + PATH_PROD_SCHUBERT_STOP_SHELL;
     /**
      * 何もしないコマンド
      */
@@ -199,7 +219,7 @@ public class WksConstants {
     /**
      * 引数異常時に表示するUSAGE
      */
-    public static final String OTHER_ARGS_MSG = "The length of the arguments must be 3.";
+    public static final String OTHER_ARGS_MSG = "The length of the arguments must be 4.";
     /**
      * タイムゾーン
      */

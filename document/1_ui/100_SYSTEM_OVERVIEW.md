@@ -16,16 +16,16 @@
 
 ## システム概要
 
-| 項目       | 内容                                                                                                         |
-|----------|------------------------------------------------------------------------------------------------------------|
-| システム名    | wakasaba_orchestrator                                                                                      |
-| 目的       | 複数のLinuxサーバに対して定型メンテナンス処理（OS更新・PaperMCサーバ更新・バックアップ等）を自動実行するオーケストレーションバッチ                                   |
-| 実行環境     | Java 21 以上（`SequencedCollection`（`List.getFirst()` 等）および `HttpClient` の `AutoCloseable` 対応を使用）/ Gradle ビルド |
-| 実行形式     | Fat JAR（Shadow JAR）によるコマンドライン実行                                                                            |
-| エントリポイント | `com.wks.main.Main`                                                                                        |
-| 対象サーバ構成  | リモートサーバ3台（SSH接続）＋自サーバ1台（ローカル実行）                                                                            |
-| ビルドツール   | Gradle / Shadow Plugin 9.3.2                                                                               |
-| 実行コマンド例  | `java -jar wakasaba_orchestrator-1.0-SNAPSHOT-all.jar <server0_file> <server1_file> <server2_file>`        |
+| 項目       | 内容                                                                                                                 |
+|----------|--------------------------------------------------------------------------------------------------------------------|
+| システム名    | wakasaba_orchestrator                                                                                              |
+| 目的       | 複数のLinuxサーバに対して定型メンテナンス処理（OS更新・PaperMCサーバ更新・バックアップ等）を自動実行するオーケストレーションバッチ                                           |
+| 実行環境     | Java 21 以上（`SequencedCollection`（`List.getFirst()` 等）および `HttpClient` の `AutoCloseable` 対応を使用）/ Gradle ビルド         |
+| 実行形式     | Fat JAR（Shadow JAR）によるコマンドライン実行                                                                                    |
+| エントリポイント | `com.wks.main.Main`                                                                                                |
+| 対象サーバ構成  | リモートサーバ4台（SSH接続）＋自サーバ1台（ローカル実行）                                                                                    |
+| ビルドツール   | Gradle / Shadow Plugin 9.3.2                                                                                       |
+| 実行コマンド例  | `java -jar wakasaba_orchestrator-1.0-SNAPSHOT-all.jar <server0_file> <server1_file> <server2_file> <server3_file>` |
 
 ---
 
@@ -57,7 +57,7 @@ com.wks
 | クラス名                    | パッケージ              | 種別     | 役割                                     |
 |-------------------------|--------------------|--------|----------------------------------------|
 | `Main`                  | `com.wks.main`     | class  | エントリポイント。引数検証・ワークフロー起動・ログファイル出力        |
-| `WksWorkFlow`           | `com.wks.workflow` | class  | 3台のリモートサーバ＋自サーバへの処理シーケンスを順次実行          |
+| `WksWorkFlow`           | `com.wks.workflow` | class  | 4台のリモートサーバ＋自サーバへの処理シーケンスを順次実行          |
 | `SshCommand`            | `com.wks.cmd`      | class  | SSH経由コマンド実行の業務ロジックラッパー。サーバ応答待機を含む      |
 | `PaperUrlGen`           | `com.wks.papermc`  | class  | PaperMC API・Modrinth API のJSONレスポンス解析  |
 | `ConnectionInformation` | `com.wks.util`     | record | SSH接続情報（host/port/user/key）の保持とファイル読込み |
@@ -108,7 +108,7 @@ Main
 ```
 main(args)
 │
-├─ [引数チェック] args.length == 3 ?
+├─ [引数チェック] args.length == 4 ?
 │     No  → USAGEメッセージ出力して終了
 │     Yes ↓
 │
@@ -136,6 +136,14 @@ main(args)
 │   │   ├─ apt update
 │   │   ├─ apt upgrade -y
 │   │   └─ shutdown -r now（即時再起動）
+│   │
+│   ├─ [サーバ3] Schubert サーバメンテナンス（SSH）
+│   │   ├─ Schubert停止シェル実行
+│   │   ├─ sleep 60（安全停止待機）
+│   │   ├─ apt update
+│   │   ├─ apt upgrade -y
+│   │   ├─ shutdown -r now（即時再起動）
+│   │   └─ Schubert起動シェル実行
 │   │
 │   └─ [自サーバ] OS メンテナンス（Bash）
 │       ├─ apt update

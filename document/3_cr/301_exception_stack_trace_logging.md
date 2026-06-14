@@ -103,7 +103,7 @@ public class Main {
 ## 例外処理フロー（変更後）
 
 ```
-main(args) ← args.length == 3
+main(args) ← args.length == 4
   │
   ├─ log に開始時刻を追記
   │

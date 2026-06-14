@@ -35,7 +35,7 @@
 ### `main(String[] args)`
 
 ```
-args.length == 3 ?
+args.length == 4 ?
   Yes:
     1. log に開始時刻を追記（LOG_START_TIME フォーマット）
     2. try 内で WksWorkFlow.execScheduledJob(args) を呼び出す

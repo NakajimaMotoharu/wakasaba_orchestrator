@@ -25,12 +25,12 @@ public class Main {
     /**
      * エントリポイント
      *
-     * @param args 3つ要求(すべてサーバの接続用データ)
-     * @throws IOException サーバファイル読み込み失敗、あるいはログファイル書き込み失敗
+     * @param args 4つ要求(すべてサーバの接続用データ)
+     * @throws IOException ログファイル書き込み失敗
      */
     public static void main(String[] args) throws IOException {
-        if (args.length == 3) {
-            // 引数が3つあるとき正常実行開始
+        if (args.length == 4) {
+            // 引数が4つあるとき正常実行開始
             // 開始ログ書き込み
             log.add(String.format(WksConstants.LOG_START_TIME, getDateTime()));
 
@@ -52,7 +52,7 @@ public class Main {
             // ログファイル出力
             outLog(String.format(WksConstants.PATH_EXEC_LOG, getDateTime()));
         } else {
-            // 引数が3つないときは引数不足時のメッセージを出力し終了
+            // 引数が4つないときは引数不足時のメッセージを出力し終了
             System.out.println(WksConstants.OTHER_ARGS_MSG);
         }
 

@@ -270,6 +270,32 @@ public class SshCommand {
     }
 
     /**
+     * Schubert起動コマンドの実行
+     *
+     * @param ci サーバ情報
+     * @throws JSchException        SSHコマンド実行に失敗
+     * @throws InterruptedException SSHコマンド実行に失敗
+     * @throws IOException          SSHコマンド標準出力取得に失敗
+     */
+    public static void startSchubert(ConnectionInformation ci) throws JSchException, InterruptedException, IOException {
+        // Schubertを起動するコマンドを実行
+        runCommand(ci, WksConstants.CMD_SCHUBERT_START);
+    }
+
+    /**
+     * Schubert停止コマンドの実行
+     *
+     * @param ci サーバ情報
+     * @throws JSchException        SSHコマンド実行に失敗
+     * @throws InterruptedException SSHコマンド実行に失敗
+     * @throws IOException          SSHコマンド標準出力取得に失敗
+     */
+    public static void stopSchubert(ConnectionInformation ci) throws JSchException, InterruptedException, IOException {
+        // Schubert停止コマンドの実行
+        runCommand(ci, WksConstants.CMD_SCHUBERT_END);
+    }
+
+    /**
      * 1分間待機するコマンドの実行
      *
      * @param ci サーバ情報

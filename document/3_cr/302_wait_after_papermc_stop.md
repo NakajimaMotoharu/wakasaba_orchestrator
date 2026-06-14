@@ -17,7 +17,7 @@
 ### 変更前の課題
 
 変更前の実装では、サーバ1（PaperMC サーバ）のワークフローにおいて、
-`SshCommand.stopPaperMC(ci2)` の直後に `SshCommand.update(ci2)` を実行していた。
+`SshCommand.stopPaperMC(ci1)` の直後に `SshCommand.update(ci1)` を実行していた。
 
 `systemctl stop papermc` はデーモン停止命令の発行のみを行うため、
 実際のプロセス終了・ファイルクローズ・セーブデータのフラッシュが完了するまでに
@@ -59,9 +59,9 @@ PaperMC のグレースフルシャットダウンが完了するための十分
 public class WksWorkFlow {
     public static void execScheduledJob(String[] servers) throws IOException, InterruptedException, JSchException {
         // PaperMC停止コマンドの実行
-        SshCommand.stopPaperMC(ci2);
+        SshCommand.stopPaperMC(ci1);
         // updateコマンドの実行
-        SshCommand.update(ci2);
+        SshCommand.update(ci1);
     }
 }
 ```
@@ -72,11 +72,11 @@ public class WksWorkFlow {
 public class WksWorkFlow {
     public static void execScheduledJob(String[] servers) throws IOException, InterruptedException, JSchException {
         // PaperMC停止コマンドの実行
-        SshCommand.stopPaperMC(ci2);
+        SshCommand.stopPaperMC(ci1);
         // 安全停止のため1分間待機
-        SshCommand.waitOneMin(ci2);
+        SshCommand.waitOneMin(ci1);
         // updateコマンドの実行
-        SshCommand.update(ci2);
+        SshCommand.update(ci1);
     }
 }
 ```
@@ -89,15 +89,15 @@ public class WksWorkFlow {
 
 | ステップ | 変更前                  | 変更後                        |
 |------|----------------------|----------------------------|
-| 8    | `stopPaperMC(ci2)`   | `stopPaperMC(ci2)`         |
-| 9    | `update(ci2)` ← 直接移行 | `waitOneMin(ci2)` ← **追加** |
-| 10   | `upgrade(ci2)`       | `update(ci2)`              |
-| 11   | `backupPaperMC(ci2)` | `upgrade(ci2)`             |
-| 12   | `wgetPaperMc(ci2)`   | `backupPaperMC(ci2)`       |
-| 13   | `movePaperMc(ci2)`   | `wgetPaperMc(ci2)`         |
-| 14   | `shutdown(ci2)`      | `movePaperMc(ci2)`         |
-| 15   | `startPaperMC(ci2)`  | `shutdown(ci2)`            |
-| 16   | —                    | `startPaperMC(ci2)`        |
+| 8    | `stopPaperMC(ci1)`   | `stopPaperMC(ci1)`         |
+| 9    | `update(ci1)` ← 直接移行 | `waitOneMin(ci1)` ← **追加** |
+| 10   | `upgrade(ci1)`       | `update(ci1)`              |
+| 11   | `backupPaperMC(ci1)` | `upgrade(ci1)`             |
+| 12   | `wgetPaperMc(ci1)`   | `backupPaperMC(ci1)`       |
+| 13   | `movePaperMc(ci1)`   | `wgetPaperMc(ci1)`         |
+| 14   | `shutdown(ci1)`      | `movePaperMc(ci1)`         |
+| 15   | `startPaperMC(ci1)`  | `shutdown(ci1)`            |
+| 16   | —                    | `startPaperMC(ci1)`        |
 
 ※ステップ番号は `execScheduledJob` 全体での通し番号ではなく、サーバ1処理内の相対順序。
 
@@ -115,17 +115,17 @@ public class WksWorkFlow {
 
 ```
 [サーバ1 (servers[1]) ← PaperMC サーバ]
-  1.  ConnectionInformation.getCiFromFile(servers[1]) → ci2
-  2.  log に ci2 の接続情報を区切りログとして追記
-  3.  SshCommand.stopPaperMC(ci2)     ← PaperMC 停止命令
-  4.  SshCommand.waitOneMin(ci2)      ← 安全停止待機（固定60秒）★追加
-  5.  SshCommand.update(ci2)
-  6.  SshCommand.upgrade(ci2)
-  7.  SshCommand.backupPaperMC(ci2)
-  8.  SshCommand.wgetPaperMc(ci2)
-  9.  SshCommand.movePaperMc(ci2)
-  10. SshCommand.shutdown(ci2)
-  11. SshCommand.startPaperMC(ci2)
+  1.  ConnectionInformation.getCiFromFile(servers[1]) → ci1
+  2.  log に ci1 の接続情報を区切りログとして追記
+  3.  SshCommand.stopPaperMC(ci1)     ← PaperMC 停止命令
+  4.  SshCommand.waitOneMin(ci1)      ← 安全停止待機（固定60秒）★追加
+  5.  SshCommand.update(ci1)
+  6.  SshCommand.upgrade(ci1)
+  7.  SshCommand.backupPaperMC(ci1)
+  8.  SshCommand.wgetPaperMc(ci1)
+  9.  SshCommand.movePaperMc(ci1)
+  10. SshCommand.shutdown(ci1)
+  11. SshCommand.startPaperMC(ci1)
 ```
 
 ---
