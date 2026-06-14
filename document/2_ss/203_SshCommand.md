@@ -31,6 +31,7 @@
 | `movePaperMc`         | `void` | `public static`  | ダウンロードしたPaperMC・Pl3xMapをSHA検証後に本番ディレクトリへ移動する |
 | `startPaperMC`        | `void` | `public static`  | `sudo systemctl start papermc` を実行する         |
 | `stopPaperMC`         | `void` | `public static`  | `sudo systemctl stop papermc` を実行する          |
+| `waitOneMin`          | `void` | `public static`  | `sleep 60` を実行する                             |
 | `backupPaperMC`       | `void` | `public static`  | バックアップシェルを実行する                               |
 | `runCommand`          | `void` | `private static` | 任意コマンドの実行・ログ記録の共通処理                          |
 | `waitForBecomeActive` | `void` | `private static` | 対象サーバが疎通可能になるまでポーリング待機する                     |
@@ -184,6 +185,18 @@ public static void stopPaperMC(ConnectionInformation ci)
 
 ---
 
+### `waitOneMin(ConnectionInformation ci)`
+
+```java
+public static void waitOneMin(ConnectionInformation ci)
+        throws JSchException, IOException, InterruptedException;
+```
+
+`runCommand(ci, WksConstants.CMD_WAIT_ONE_MIN)` を呼び出し、対象サーバ上で `sleep 60` を実行する。  
+PaperMC停止後の安全停止待機に使用し、呼び出し元はSSHコマンド完了までブロッキングされる。
+
+---
+
 ### `backupPaperMC(ConnectionInformation ci)`
 
 ```java
@@ -203,7 +216,8 @@ private static void runCommand(ConnectionInformation ci, String cmd)
         throws JSchException, InterruptedException, IOException;
 ```
 
-コマンド実行の共通処理。`update`・`upgrade`・`shutdown`・`startPaperMC`・`stopPaperMC`・`backupPaperMC`・`wgetPaperMc`
+コマンド実行の共通処理。`update`・`upgrade`・`shutdown`・`startPaperMC`・`stopPaperMC`・`waitOneMin`・`backupPaperMC`・
+`wgetPaperMc`
 から呼ばれる（
 `movePaperMc` は内部で直接 `SshExec` を操作するため、このメソッドを経由しない）。
 

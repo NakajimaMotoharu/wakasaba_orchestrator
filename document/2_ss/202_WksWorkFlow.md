@@ -64,36 +64,37 @@ public static void execScheduledJob(String[] servers)
   6.  ConnectionInformation.getCiFromFile(servers[1]) → ci2
   7.  log に ci2 情報を追記
   8.  SshCommand.stopPaperMC(ci2)
-  9.  SshCommand.update(ci2)
-  10. SshCommand.upgrade(ci2)
-  11. SshCommand.backupPaperMC(ci2)
-  12. SshCommand.wgetPaperMc(ci2)
-  13. SshCommand.movePaperMc(ci2)
-  14. SshCommand.shutdown(ci2)
-  15. SshCommand.startPaperMC(ci2)
+  9.  SshCommand.waitOneMin(ci2)
+  10. SshCommand.update(ci2)
+  11. SshCommand.upgrade(ci2)
+  12. SshCommand.backupPaperMC(ci2)
+  13. SshCommand.wgetPaperMc(ci2)
+  14. SshCommand.movePaperMc(ci2)
+  15. SshCommand.shutdown(ci2)
+  16. SshCommand.startPaperMC(ci2)
 
 [サーバ2 (servers[2])]
-  16. ConnectionInformation.getCiFromFile(servers[2]) → ci3
-  17. log に ci3 情報を追記
-  18. SshCommand.update(ci3)
-  19. SshCommand.upgrade(ci3)
-  20. SshCommand.shutdown(ci3)
+  17. ConnectionInformation.getCiFromFile(servers[2]) → ci3
+  18. log に ci3 情報を追記
+  19. SshCommand.update(ci3)
+  20. SshCommand.upgrade(ci3)
+  21. SshCommand.shutdown(ci3)
 
 [自サーバ (ローカル)]
-  21. log に `LOG_SPLIT` フォーマットに `LOG_THIS_SERVER` を埋め込んだ区切りログを追記
-  22. BashExec.update()
-  23. BashExec.upgrade()
-  24. BashExec.shutdown()
+  22. log に `LOG_SPLIT` フォーマットに `LOG_THIS_SERVER` を埋め込んだ区切りログを追記
+  23. BashExec.update()
+  24. BashExec.upgrade()
+  25. BashExec.shutdown()
 ```
 
 #### 各サーバの役割と処理内容
 
-| 対象   | 接続方式 | 主な処理                                                                      |
-|------|------|---------------------------------------------------------------------------|
-| サーバ0 | SSH  | OSアップデート・アップグレード・再起動                                                      |
-| サーバ1 | SSH  | PaperMC停止 → OSアップデート・アップグレード → バックアップ → PaperMC最新版取得・配置 → 再起動 → PaperMC起動 |
-| サーバ2 | SSH  | OSアップデート・アップグレード・再起動                                                      |
-| 自サーバ | Bash | OSアップデート・アップグレード・再起動（60秒後バックグラウンド）                                        |
+| 対象   | 接続方式 | 主な処理                                                                              |
+|------|------|-----------------------------------------------------------------------------------|
+| サーバ0 | SSH  | OSアップデート・アップグレード・再起動                                                              |
+| サーバ1 | SSH  | PaperMC停止 → 60秒待機 → OSアップデート・アップグレード → バックアップ → PaperMC最新版取得・配置 → 再起動 → PaperMC起動 |
+| サーバ2 | SSH  | OSアップデート・アップグレード・再起動                                                              |
+| 自サーバ | Bash | OSアップデート・アップグレード・再起動（60秒後バックグラウンド）                                                |
 
 #### 引数
 
@@ -114,6 +115,8 @@ public static void execScheduledJob(String[] servers)
 ## 設計上の注意点
 
 - サーバ1はPaperMCサーバであり、他の2台とは異なりPaperMC固有の処理（停止・バックアップ・更新・起動）が含まれる。
+- `SshCommand.waitOneMin(ci2)` は `CMD_WAIT_ONE_MIN`（`sleep 60`）をSSH経由で実行し、`SshExec.execute()` の完了までブロッキングする。
+- 待機中にPaperMCのプロセス状態は監視せず、60秒経過後は停止状態にかかわらず後続処理へ進む。
 - `SshCommand.shutdown()` 実行後もSSH接続が試みられる（`startPaperMC` 等）。これは再起動完了を待つ `waitForBecomeActive` が
   `SshCommand` 内で対応しているため成立する。
 - 自サーバの `BashExec.shutdown()` はバックグラウンドで60秒後に実行されるため（`CMD_SLEEP_SHUTDOWN`

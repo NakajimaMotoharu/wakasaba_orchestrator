@@ -44,6 +44,7 @@
 | `CMD_PAPERMC_END`    | `String` | `"sudo systemctl stop papermc"`                                                | PaperMCサービス停止コマンド                      |
 | `CMD_PAPERMC_BACKUP` | `String` | `"sh /home/mini/mcs/shell/backup.sh"`                                          | バックアップシェル実行コマンド                        |
 | `CMD_DO_NOTHING`     | `String` | `":"`                                                                          | Bashのno-opコマンド。SSH疎通確認用                |
+| `CMD_WAIT_ONE_MIN`   | `String` | `"sleep 60"`                                                                   | 固定60秒待機コマンド                            |
 | `CMD_SLEEP_SHUTDOWN` | `String` | `"(sleep 60 && sudo shutdown -r now) &"`                                       | 60秒後にバックグラウンドで再起動するコマンド                |
 | `CMD_SHELL_HEAD`     | `String` | `"sh"`                                                                         | シェル実行コマンド（ProcessBuilder用）             |
 | `CMD_SHELL_OPTION`   | `String` | `"-c"`                                                                         | シェル実行オプション（ProcessBuilder用）            |

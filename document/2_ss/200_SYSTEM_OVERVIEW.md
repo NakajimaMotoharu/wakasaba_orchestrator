@@ -94,7 +94,7 @@ main(args)
 │
 ├─ ログ: 開始時刻記録
 │
-├─ WksWorkFlow.execScheduledJob(args)
+├─ try: WksWorkFlow.execScheduledJob(args)
 │   │
 │   ├─ [サーバ0] 接続情報読込み
 │   │   ├─ update
@@ -103,6 +103,7 @@ main(args)
 │   │
 │   ├─ [サーバ1] 接続情報読込み  ← PaperMCサーバ
 │   │   ├─ stopPaperMC
+│   │   ├─ waitOneMin           ← sleep 60による安全停止待機
 │   │   ├─ update
 │   │   ├─ upgrade
 │   │   ├─ backupPaperMC
@@ -121,6 +122,7 @@ main(args)
 │       ├─ upgrade
 │       └─ shutdown (60秒後 reboot, バックグラウンド)
 │
+├─ catch (Exception): スタックトレースをログへ追記
 ├─ ログ: 終了時刻記録
 └─ ログファイル出力 (log_yyyyMMddHHmmss.txt)
 ```
