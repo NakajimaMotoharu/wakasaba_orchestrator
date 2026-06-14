@@ -47,17 +47,21 @@ public static final ArrayList<String> log = new ArrayList<>();
 ### `main(String[] args)`
 
 ```java
-public static void main(String[] args)
-		throws IOException, InterruptedException, JSchException;
+public static void main(String[] args) throws IOException;
 ```
 
 #### 処理フロー
 
 ```
-args.length == 3 ?
+args.length == 4 ?
   Yes:
     1. log に開始時刻を追記（WksConstants.LOG_START_TIME）
-    2. WksWorkFlow.execScheduledJob(args) を呼び出す
+    2. try 内で WksWorkFlow.execScheduledJob(args) を呼び出す
+       catch (Exception e):
+         a. StringWriter を生成する
+         b. PrintWriter を生成する
+         c. e.printStackTrace(pw) を実行する
+         d. sw.toString() を log に追記する
     3. log に終了時刻を追記（WksConstants.LOG_END_TIME）
     4. outLog(ログファイルパス) を呼び出す
   No:
@@ -68,15 +72,16 @@ args.length == 3 ?
 
 | 引数名    | 型          | 説明                                 |
 |--------|------------|------------------------------------|
-| `args` | `String[]` | コマンドライン引数。3要素必須（各要素はサーバ接続情報ファイルパス） |
+| `args` | `String[]` | コマンドライン引数。4要素必須（各要素はサーバ接続情報ファイルパス） |
 
 #### 例外
 
-| 例外クラス                  | 発生条件                          |
-|------------------------|-------------------------------|
-| `IOException`          | サーバファイル読み込み失敗、またはログファイル書き込み失敗 |
-| `InterruptedException` | SSHコマンド実行中の割り込み               |
-| `JSchException`        | SSH接続・実行失敗                    |
+| 例外クラス         | 発生条件                          |
+|---------------|-------------------------------|
+| `IOException` | `outLog()` によるログファイル生成・書き込み失敗 |
+
+`WksWorkFlow.execScheduledJob` から送出される `IOException`・`InterruptedException`・`JSchException` および非検査例外は、
+`catch (Exception e)` で捕捉してスタックトレースをログへ追記する。
 
 ---
 
@@ -134,4 +139,6 @@ private static String getDateTime();
 
 - `log` を `public static final` にしているため、各クラスから `Main.log` として直接参照・追記が可能。シングルトン的なグローバルログバッファとして機能している。
 - ログファイルのパスには開始時刻と異なるタイムスタンプ（終了後の `getDateTime()` 呼出し）が使われるため、ファイル名は終了時刻を示す。
-- 処理中の例外はすべて `throws` で上位に委譲しており、`main` メソッド内での個別ハンドリングは行っていない。
+- ワークフロー実行中の例外は `catch (Exception e)` で捕捉するため、例外発生後も終了時刻記録とログファイル出力へ進む。
+- スタックトレースは `StringWriter` と `PrintWriter` を使用して文字列化し、1要素として `log` に追加する。
+- `outLog()` 自身が送出する `IOException` は捕捉されず、JVMへ伝播する。

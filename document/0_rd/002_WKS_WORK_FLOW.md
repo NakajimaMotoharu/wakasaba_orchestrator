@@ -7,7 +7,7 @@
 | 完全修飾クラス名 | `com.wks.workflow.WksWorkFlow`                                        |
 | ファイル名    | `WksWorkFlow.java`                                                    |
 | 種別       | class（public）                                                         |
-| 責務       | 3台のリモートサーバおよび自サーバに対する処理シーケンスを定義・実行する。サーバ間の処理順序を一元管理する                 |
+| 責務       | 4台のリモートサーバおよび自サーバに対する処理シーケンスを定義・実行する。サーバ間の処理順序を一元管理する                 |
 | 主な依存クラス  | `Main`、`SshCommand`、`BashExec`、`ConnectionInformation`、`WksConstants` |
 
 ---
@@ -16,9 +16,9 @@
 
 ### WF-01：処理シーケンスの一元管理・直列実行
 
-- 全サーバ（サーバ0・サーバ1・サーバ2・自サーバ）への処理シーケンスを1箇所に集約して定義すること。
+- 全サーバ（サーバ0・サーバ1・サーバ2・サーバ3・自サーバ）への処理シーケンスを1箇所に集約して定義すること。
 - 各サーバへの処理は直列に実行し、前サーバの全処理完了後に次サーバの処理を開始すること。
-- 実行順序は サーバ0 → サーバ1 → サーバ2 → 自サーバ の順に固定すること。
+- 実行順序は サーバ0 → サーバ1 → サーバ2 → サーバ3 → 自サーバ の順に固定すること。
 
 ### WF-02：サーバ0 のOSメンテナンス（SSH）
 
@@ -37,15 +37,16 @@
 1. 接続情報ファイルを読み込み `ConnectionInformation` を生成する
 2. サーバ処理開始区切りログをグローバルログへ追記する
 3. `SshCommand.stopPaperMC(ci)` を実行する
-4. `SshCommand.update(ci)` を実行する
-5. `SshCommand.upgrade(ci)` を実行する
-6. `SshCommand.backupPaperMC(ci)` を実行する
-7. `SshCommand.wgetPaperMc(ci)` を実行する
-8. `SshCommand.movePaperMc(ci)` を実行する
-9. `SshCommand.shutdown(ci)` を実行する
+4. PaperMCの安全停止を待つため `SshCommand.waitOneMin(ci)` を実行する
+5. `SshCommand.update(ci)` を実行する
+6. `SshCommand.upgrade(ci)` を実行する
+7. `SshCommand.backupPaperMC(ci)` を実行する
+8. `SshCommand.wgetPaperMc(ci)` を実行する
+9. `SshCommand.movePaperMc(ci)` を実行する
+10. `SshCommand.shutdown(ci)` を実行する
     - 再起動後の接続待機は `SshCommand` 内の `waitForBecomeActive` が自動的に処理する（FR-04 ステップ8に相当）。
       `WksWorkFlow` 側での明示的な待機処理は不要
-10. `SshCommand.startPaperMC(ci)` を実行する
+11. `SshCommand.startPaperMC(ci)` を実行する
 
 ### WF-04：サーバ2 のOSメンテナンス（SSH）
 
@@ -57,14 +58,27 @@
 4. `SshCommand.upgrade(ci)` を実行する
 5. `SshCommand.shutdown(ci)` を実行する
 
-### WF-05：自サーバのOSメンテナンス（Bash）
+### WF-05：サーバ3 のSchubertサーバメンテナンス（SSH）
+
+コマンドライン引数 `servers[3]` の接続情報を使用し、以下を順次実行すること。
+
+1. 接続情報ファイルを読み込み `ConnectionInformation` を生成する
+2. サーバ処理開始区切りログをグローバルログへ追記する
+3. `SshCommand.stopSchubert(ci)` を実行する
+4. Schubertの安全停止を待つため `SshCommand.waitOneMin(ci)` を実行する
+5. `SshCommand.update(ci)` を実行する
+6. `SshCommand.upgrade(ci)` を実行する
+7. `SshCommand.shutdown(ci)` を実行する
+8. `SshCommand.startSchubert(ci)` を実行する
+
+### WF-06：自サーバのOSメンテナンス（Bash）
 
 1. `WksConstants.LOG_SPLIT` のフォーマットに `WksConstants.LOG_THIS_SERVER` を埋め込んだ区切りログをグローバルログへ追記する
 2. `BashExec.update()` を実行する
 3. `BashExec.upgrade()` を実行する
 4. `BashExec.shutdown()` を実行する
 
-### WF-06：サーバ区切りログの記録
+### WF-07：サーバ区切りログの記録
 
 - 各サーバの処理開始前に、`WksConstants.LOG_SPLIT` のフォーマットに従い接続情報文字列（host・port・user）を埋め込んだ区切りログをグローバルログへ追記すること。
 - 自サーバについては `WksConstants.LOG_THIS_SERVER` の文字列を区切りログへ追記すること。
@@ -83,7 +97,7 @@
 
 | メソッド名              | 戻り値型   | 修飾子             | 要件概要                                 |
 |--------------------|--------|-----------------|--------------------------------------|
-| `execScheduledJob` | `void` | `public static` | 4つの対象に対して定型処理を直列に順次実行する。引数は3つのファイルパス |
+| `execScheduledJob` | `void` | `public static` | 5つの対象に対して定型処理を直列に順次実行する。引数は4つのファイルパス |
 
 ---
 
@@ -101,7 +115,11 @@
 
 ## 制約・注意事項
 
-- サーバ1はPaperMCサーバであり、他の2台とは異なりPaperMC固有の処理が含まれること。
+- サーバ1はPaperMCサーバであり、PaperMC固有の処理が含まれること。
+- サーバ3はSchubertサーバであり、Schubert停止・起動シェルの実行を含むこと。
+- Schubert停止後は固定60秒待機し、停止状態の動的確認は行わず後続処理へ進むこと。
+- PaperMC停止後はグレースフルシャットダウン、ファイルクローズおよびセーブデータのフラッシュ完了を待つため、固定60秒の待機を行うこと。
+- 60秒経過時点で停止状態の動的確認は行わず、異常停止状態であっても後続処理を継続すること。
 - `SshCommand.shutdown()` による再起動後も後続処理が続く場合は、`SshCommand` 内のポーリング機構が再起動完了を待機するため、
   `WksWorkFlow` 側での待機処理は不要である。
 - 自サーバの `BashExec.shutdown()` は60秒遅延バックグラウンド実行であり、呼出し直後にバッチ処理は終了する。
