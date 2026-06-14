@@ -42,10 +42,10 @@
 
 ```java
 public class Main {
-	public static void main(String[] args) throws IOException {
-		// ワークフローに従い各サーバにアクセス・処理実行
-		WksWorkFlow.execScheduledJob(args);
-	}
+    public static void main(String[] args) throws IOException {
+        // ワークフローに従い各サーバにアクセス・処理実行
+        WksWorkFlow.execScheduledJob(args);
+    }
 }
 ```
 
@@ -53,21 +53,21 @@ public class Main {
 
 ```java
 public class Main {
-	public static void main(String[] args) throws IOException {
-		try {
-			// ワークフローに従い各サーバにアクセス・処理実行
-			WksWorkFlow.execScheduledJob(args);
-		} catch (Exception e) {
-			// メモリ上に文字列を書き込むためのバッファ作成
-			StringWriter sw = new StringWriter();
-			// StringWriterに書き込むためのPrintWriterを作成
-			PrintWriter pw = new PrintWriter(sw);
-			// スタックトレースをPrintWriterへ出力
-			e.printStackTrace(pw);
-			// StringWriterに溜まった内容を1つの文字列として取得、ログへ追記
-			log.add(sw.toString());
-		}
-	}
+    public static void main(String[] args) throws IOException {
+        try {
+            // ワークフローに従い各サーバにアクセス・処理実行
+            WksWorkFlow.execScheduledJob(args);
+        } catch (Exception e) {
+            // メモリ上に文字列を書き込むためのバッファ作成
+            StringWriter sw = new StringWriter();
+            // StringWriterに書き込むためのPrintWriterを作成
+            PrintWriter pw = new PrintWriter(sw);
+            // スタックトレースをPrintWriterへ出力
+            e.printStackTrace(pw);
+            // StringWriterに溜まった内容を1つの文字列として取得、ログへ追記
+            log.add(sw.toString());
+        }
+    }
 }
 ```
 

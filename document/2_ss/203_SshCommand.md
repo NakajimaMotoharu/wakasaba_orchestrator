@@ -43,7 +43,7 @@
 
 ```java
 public static void update(ConnectionInformation ci)
-		throws JSchException, InterruptedException, IOException;
+        throws JSchException, InterruptedException, IOException;
 ```
 
 `runCommand(ci, WksConstants.CMD_UPDATE)` を呼び出す単純なラッパー。
@@ -54,7 +54,7 @@ public static void update(ConnectionInformation ci)
 
 ```java
 public static void upgrade(ConnectionInformation ci)
-		throws JSchException, InterruptedException, IOException;
+        throws JSchException, InterruptedException, IOException;
 ```
 
 `runCommand(ci, WksConstants.CMD_UPGRADE)` を呼び出す単純なラッパー。
@@ -65,7 +65,7 @@ public static void upgrade(ConnectionInformation ci)
 
 ```java
 public static void shutdown(ConnectionInformation ci)
-		throws JSchException, InterruptedException, IOException;
+        throws JSchException, InterruptedException, IOException;
 ```
 
 `runCommand(ci, WksConstants.CMD_SHUTDOWN)` を呼び出す単純なラッパー。  
@@ -77,7 +77,7 @@ public static void shutdown(ConnectionInformation ci)
 
 ```java
 public static void wgetPaperMc(ConnectionInformation ci)
-		throws IOException, InterruptedException, JSchException;
+        throws IOException, InterruptedException, JSchException;
 ```
 
 PaperMCおよびPl3xMapの最新版JARファイルをリモートサーバ上にダウンロードする。
@@ -109,7 +109,7 @@ PaperMCおよびPl3xMapの最新版JARファイルをリモートサーバ上に
 
 ```java
 public static void movePaperMc(ConnectionInformation ci)
-		throws IOException, InterruptedException, JSchException;
+        throws IOException, InterruptedException, JSchException;
 ```
 
 ダウンロード済みのPaperMC・Pl3xMap JARファイルをSHAチェックサムで検証し、正常な場合のみ本番ディレクトリへ移動する。
@@ -166,7 +166,7 @@ public static void movePaperMc(ConnectionInformation ci)
 
 ```java
 public static void startPaperMC(ConnectionInformation ci)
-		throws JSchException, InterruptedException, IOException;
+        throws JSchException, InterruptedException, IOException;
 ```
 
 `runCommand(ci, WksConstants.CMD_PAPERMC_START)` を呼び出す単純なラッパー。
@@ -177,7 +177,7 @@ public static void startPaperMC(ConnectionInformation ci)
 
 ```java
 public static void stopPaperMC(ConnectionInformation ci)
-		throws JSchException, InterruptedException, IOException;
+        throws JSchException, InterruptedException, IOException;
 ```
 
 `runCommand(ci, WksConstants.CMD_PAPERMC_END)` を呼び出す単純なラッパー。
@@ -188,7 +188,7 @@ public static void stopPaperMC(ConnectionInformation ci)
 
 ```java
 public static void backupPaperMC(ConnectionInformation ci)
-		throws JSchException, InterruptedException, IOException;
+        throws JSchException, InterruptedException, IOException;
 ```
 
 `runCommand(ci, WksConstants.CMD_PAPERMC_BACKUP)` を呼び出す単純なラッパー。  
@@ -200,7 +200,7 @@ public static void backupPaperMC(ConnectionInformation ci)
 
 ```java
 private static void runCommand(ConnectionInformation ci, String cmd)
-		throws JSchException, InterruptedException, IOException;
+        throws JSchException, InterruptedException, IOException;
 ```
 
 コマンド実行の共通処理。`update`・`upgrade`・`shutdown`・`startPaperMC`・`stopPaperMC`・`backupPaperMC`・`wgetPaperMc`
@@ -223,7 +223,7 @@ private static void runCommand(ConnectionInformation ci, String cmd)
 
 ```java
 private static void waitForBecomeActive(ConnectionInformation ci)
-		throws JSchException, InterruptedException;
+        throws JSchException, InterruptedException;
 ```
 
 対象サーバへのSSH接続が成功するまで1秒間隔でポーリングする。  

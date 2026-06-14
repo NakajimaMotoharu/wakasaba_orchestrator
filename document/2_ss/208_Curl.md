@@ -35,7 +35,7 @@
 
 ```java
 public static String exec(String userAgent, String url)
-		throws IOException, InterruptedException;
+        throws IOException, InterruptedException;
 ```
 
 #### 概要

@@ -60,15 +60,15 @@
 
 ```java
 public class SshExec {
-	public boolean isAlive() throws JSchException {
-		// 略
-		try {
-			session.connect();
-		} catch (JSchException e) {
-			return false;  // 接続失敗 = サーバ未応答として扱う
-		}
-		// 略
-	}
+    public boolean isAlive() throws JSchException {
+        // 略
+        try {
+            session.connect();
+        } catch (JSchException e) {
+            return false;  // 接続失敗 = サーバ未応答として扱う
+        }
+        // 略
+    }
 }
 ```
 
