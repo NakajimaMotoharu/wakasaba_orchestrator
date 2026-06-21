@@ -38,45 +38,57 @@
 [サーバ0 (servers[0])]
   1. ConnectionInformation.getCiFromFile(servers[0]) → ci0
   2. log に ci0 の接続情報を区切りログとして追記
-  3. SshCommand.update(ci0)
-  4. SshCommand.upgrade(ci0)
-  5. SshCommand.shutdown(ci0)
+  3. SshCommand.isAlive(ci0)
+     ├─ false: WARNING: Server Not Active をログへ追記し、サーバ1へ進む
+     └─ true:
+        4. SshCommand.update(ci0)
+        5. SshCommand.upgrade(ci0)
+        6. SshCommand.shutdown(ci0)
 
 [サーバ1 (servers[1]) ← PaperMC サーバ]
-  6.  ConnectionInformation.getCiFromFile(servers[1]) → ci1
-  7.  log に ci1 の接続情報を区切りログとして追記
-  8.  SshCommand.stopPaperMC(ci1)
-  9.  SshCommand.waitOneMin(ci1)  ← 安全停止のため固定60秒待機
-  10. SshCommand.update(ci1)
-  11. SshCommand.upgrade(ci1)
-  12. SshCommand.backupPaperMC(ci1)
-  13. SshCommand.wgetPaperMc(ci1)
-  14. SshCommand.movePaperMc(ci1)
-  15. SshCommand.shutdown(ci1)
-  16. SshCommand.startPaperMC(ci1)
+  7.  ConnectionInformation.getCiFromFile(servers[1]) → ci1
+  8.  log に ci1 の接続情報を区切りログとして追記
+  9.  SshCommand.isAlive(ci1)
+      ├─ false: WARNING: Server Not Active をログへ追記し、サーバ2へ進む
+      └─ true:
+         10. SshCommand.stopPaperMC(ci1)
+         11. SshCommand.waitOneMin(ci1)  ← 安全停止のため固定60秒待機
+         12. SshCommand.update(ci1)
+         13. SshCommand.upgrade(ci1)
+         14. SshCommand.backupPaperMC(ci1)
+         15. SshCommand.wgetPaperMc(ci1)
+         16. SshCommand.movePaperMc(ci1)
+         17. SshCommand.shutdown(ci1)
+         18. SshCommand.startPaperMC(ci1)
 
 [サーバ2 (servers[2])]
-  17. ConnectionInformation.getCiFromFile(servers[2]) → ci2
-  18. log に ci2 の接続情報を区切りログとして追記
-  19. SshCommand.update(ci2)
-  20. SshCommand.upgrade(ci2)
-  21. SshCommand.shutdown(ci2)
+  19. ConnectionInformation.getCiFromFile(servers[2]) → ci2
+  20. log に ci2 の接続情報を区切りログとして追記
+  21. SshCommand.isAlive(ci2)
+      ├─ false: WARNING: Server Not Active をログへ追記し、サーバ3へ進む
+      └─ true:
+         22. SshCommand.update(ci2)
+         23. SshCommand.upgrade(ci2)
+         24. SshCommand.shutdown(ci2)
 
 [サーバ3 (servers[3]) ← Schubert サーバ]
-  22. ConnectionInformation.getCiFromFile(servers[3]) → ci3
-  23. log に ci3 の接続情報を区切りログとして追記
-  24. SshCommand.stopSchubert(ci3)
-  25. SshCommand.waitOneMin(ci3)  ← 安全停止のため固定60秒待機
-  26. SshCommand.update(ci3)
-  27. SshCommand.upgrade(ci3)
-  28. SshCommand.shutdown(ci3)
-  29. SshCommand.startSchubert(ci3)
+  25. ConnectionInformation.getCiFromFile(servers[3]) → ci3
+  26. log に ci3 の接続情報を区切りログとして追記
+  27. SshCommand.isAlive(ci3)
+      ├─ false: WARNING: Server Not Active をログへ追記し、自サーバへ進む
+      └─ true:
+         28. SshCommand.stopSchubert(ci3)
+         29. SshCommand.waitOneMin(ci3)  ← 安全停止のため固定60秒待機
+         30. SshCommand.update(ci3)
+         31. SshCommand.upgrade(ci3)
+         32. SshCommand.shutdown(ci3)
+         33. SshCommand.startSchubert(ci3)
 
 [自サーバ（ローカル）]
-  30. log に `LOG_SPLIT` フォーマットに `LOG_THIS_SERVER` を埋め込んだ区切りログを追記
-  31. BashExec.update()
-  32. BashExec.upgrade()
-  33. BashExec.shutdown()
+  34. log に `LOG_SPLIT` フォーマットに `LOG_THIS_SERVER` を埋め込んだ区切りログを追記
+  35. BashExec.update()
+  36. BashExec.upgrade()
+  37. BashExec.shutdown()
 ```
 
 ### 各対象の役割と処理内容
@@ -105,6 +117,7 @@
 
 - サーバ1はPaperMCサーバであり、PaperMC固有の処理（停止・バックアップ・更新・起動）が含まれる。
 - サーバ3はSchubertサーバであり、停止・起動シェルを使用する。
+- リモートサーバが処理開始時点で非アクティブの場合、そのサーバの保守処理は実行せず、警告ログを出して後続サーバへ進む。
 - Schubert停止後の `waitOneMin` も固定60秒のブロッキング待機であり、停止状態の動的ポーリングは行わない。
 - PaperMC停止後の `waitOneMin` は `sleep 60` をSSH経由で実行する固定時間のブロッキング待機であり、停止状態の動的ポーリングは行わない。
 - 60秒経過後はPaperMCが停止していない場合でも異常停止状態として後続処理を継続する。
