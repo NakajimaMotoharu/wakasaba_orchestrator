@@ -364,4 +364,17 @@ public class SshCommand {
         }
     }
 
+    /**
+     * ci情報に接続可能か判定
+     *
+     * @param ci サーバ情報
+     * @throws JSchException SSHコマンド実行に失敗
+     */
+    public static boolean isAlive(ConnectionInformation ci) throws JSchException {
+        // 何もしないコマンドを実行するsshExecを作成
+        SshExec sshExec = new SshExec(ci, WksConstants.CMD_DO_NOTHING);
+
+        return sshExec.isAlive();
+    }
+
 }

@@ -22,21 +22,22 @@
 
 ## メソッド一覧
 
-| メソッド名                 | 戻り値型   | 修飾子              | 説明                                           |
-|-----------------------|--------|------------------|----------------------------------------------|
-| `update`              | `void` | `public static`  | `sudo apt update` を実行する                      |
-| `upgrade`             | `void` | `public static`  | `sudo apt upgrade -y` を実行する                  |
-| `shutdown`            | `void` | `public static`  | `sudo shutdown -r now` を実行する                 |
-| `wgetPaperMc`         | `void` | `public static`  | PaperMC・Pl3xMap の最新版をダウンロードする                |
-| `movePaperMc`         | `void` | `public static`  | ダウンロードしたPaperMC・Pl3xMapをSHA検証後に本番ディレクトリへ移動する |
-| `startPaperMC`        | `void` | `public static`  | `sudo systemctl start papermc` を実行する         |
-| `stopPaperMC`         | `void` | `public static`  | `sudo systemctl stop papermc` を実行する          |
-| `waitOneMin`          | `void` | `public static`  | `sleep 60` を実行する                             |
-| `startSchubert`       | `void` | `public static`  | Schubert起動シェルを実行する                           |
-| `stopSchubert`        | `void` | `public static`  | Schubert停止シェルを実行する                           |
-| `backupPaperMC`       | `void` | `public static`  | バックアップシェルを実行する                               |
-| `runCommand`          | `void` | `private static` | 任意コマンドの実行・ログ記録の共通処理                          |
-| `waitForBecomeActive` | `void` | `private static` | 対象サーバが疎通可能になるまでポーリング待機する                     |
+| メソッド名                 | 戻り値型      | 修飾子              | 説明                                           |
+|-----------------------|-----------|------------------|----------------------------------------------|
+| `update`              | `void`    | `public static`  | `sudo apt update` を実行する                      |
+| `upgrade`             | `void`    | `public static`  | `sudo apt upgrade -y` を実行する                  |
+| `shutdown`            | `void`    | `public static`  | `sudo shutdown -r now` を実行する                 |
+| `wgetPaperMc`         | `void`    | `public static`  | PaperMC・Pl3xMap の最新版をダウンロードする                |
+| `movePaperMc`         | `void`    | `public static`  | ダウンロードしたPaperMC・Pl3xMapをSHA検証後に本番ディレクトリへ移動する |
+| `startPaperMC`        | `void`    | `public static`  | `sudo systemctl start papermc` を実行する         |
+| `stopPaperMC`         | `void`    | `public static`  | `sudo systemctl stop papermc` を実行する          |
+| `waitOneMin`          | `void`    | `public static`  | `sleep 60` を実行する                             |
+| `startSchubert`       | `void`    | `public static`  | Schubert起動シェルを実行する                           |
+| `stopSchubert`        | `void`    | `public static`  | Schubert停止シェルを実行する                           |
+| `backupPaperMC`       | `void`    | `public static`  | バックアップシェルを実行する                               |
+| `isAlive`             | `boolean` | `public static`  | 対象サーバへSSH接続可能か判定する                           |
+| `runCommand`          | `void`    | `private static` | 任意コマンドの実行・ログ記録の共通処理                          |
+| `waitForBecomeActive` | `void`    | `private static` | 対象サーバが疎通可能になるまでポーリング待機する                     |
 
 ---
 
@@ -284,9 +285,33 @@ private static void waitForBecomeActive(ConnectionInformation ci)
 
 ---
 
+### `isAlive(ConnectionInformation ci)`
+
+```java
+public static boolean isAlive(ConnectionInformation ci)
+        throws JSchException;
+```
+
+処理開始時点で対象サーバへSSH接続可能か判定する。`SshExec.isAlive()` を呼び出し、その結果を返却する。
+コマンド実行および標準出力ログの追加は行わない。
+
+#### 処理フロー
+
+```
+1. SshExec(ci, CMD_DO_NOTHING) のインスタンスを生成
+2. sshExec.isAlive() の結果を返却
+```
+
+| 使用定数             | 値     | 意味                       |
+|------------------|-------|--------------------------|
+| `CMD_DO_NOTHING` | `":"` | Bashのno-opコマンド。接続確認のみに使用 |
+
+---
+
 ## 設計上の注意点
 
 - `runCommand` はすべてのコマンド実行の前に `waitForBecomeActive` を呼ぶため、サーバが再起動中であっても応答待ちで自動リトライされる。
+- `isAlive` は `WksWorkFlow` の処理開始時疎通確認で使用し、非アクティブサーバをスキップするための判定値を返す。
 - `movePaperMc` におけるPl3xMapの旧ファイル削除（`CMD_PL3XMAP_RM`）は、新バージョンのダウンロード有無に関わらず**常に実行**
   される。これにより、バージョン不一致時でも旧ファイルは削除される。
 - `wgetPaperMc` と `movePaperMc` の両方でAPIを呼び出してバージョン情報を取得しており、処理の間にAPIレスポンスが変わるケースへの考慮はない（実用上ほぼ問題なし）。

@@ -117,11 +117,13 @@ main(args)
 ├─ try: WksWorkFlow.execScheduledJob(args)
 │   │
 │   ├─ [サーバ0] OS メンテナンス（SSH）
+│   │   ├─ isAlive? No → WARNING: Server Not Active をログへ追記して次サーバへ
 │   │   ├─ apt update
 │   │   ├─ apt upgrade -y
 │   │   └─ shutdown -r now（即時再起動）
 │   │
 │   ├─ [サーバ1] PaperMC サーバメンテナンス（SSH）
+│   │   ├─ isAlive? No → WARNING: Server Not Active をログへ追記して次サーバへ
 │   │   ├─ PaperMC サービス停止
 │   │   ├─ sleep 60（安全停止待機）
 │   │   ├─ apt update
@@ -133,11 +135,13 @@ main(args)
 │   │   └─ PaperMC サービス起動
 │   │
 │   ├─ [サーバ2] OS メンテナンス（SSH）
+│   │   ├─ isAlive? No → WARNING: Server Not Active をログへ追記して次サーバへ
 │   │   ├─ apt update
 │   │   ├─ apt upgrade -y
 │   │   └─ shutdown -r now（即時再起動）
 │   │
 │   ├─ [サーバ3] Schubert サーバメンテナンス（SSH）
+│   │   ├─ isAlive? No → WARNING: Server Not Active をログへ追記して自サーバへ
 │   │   ├─ Schubert停止シェル実行
 │   │   ├─ sleep 60（安全停止待機）
 │   │   ├─ apt update
@@ -163,7 +167,7 @@ main(args)
 - `Main.main` はワークフロー実行中の `Exception` を捕捉し、スタックトレースをログへ追記した後、終了時刻記録とログファイル出力へ進む。
 - `Main.outLog` が送出する `IOException` は捕捉せずJVMへ伝播する。
 - `SshExec.isAlive()` 内部のみ例外を吸収する。`session.connect()` が投げるすべての `JSchException` を `false`
-  として返し、再起動中のサーバへのポーリング待機を実現する。
+  として返す。処理開始時疎通確認では非アクティブサーバのスキップ判定に使用し、再起動待ちではポーリング継続判定に使用する。
 
 | 例外クラス                            | 主な発生状況                                                |
 |----------------------------------|-------------------------------------------------------|
@@ -208,6 +212,7 @@ main(args)
 - コマンドは `ChannelExec` モードで1コマンドずつ実行する。
 - サーバ再起動後の再接続は `SshCommand.waitForBecomeActive()`
   がポーリング（1秒間隔）で自動待機する。この待機はすべてのSSHコマンド実行前に行われるため、再起動中のサーバへも自動でリトライが行われる。
+- 各リモートサーバの処理開始時には `SshCommand.isAlive()` で初期疎通確認を行う。非アクティブの場合は対象サーバの処理をスキップし、警告ログを記録して後続処理へ進む。
 
 ### HTTP REST API
 

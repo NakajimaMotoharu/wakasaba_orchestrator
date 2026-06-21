@@ -97,11 +97,13 @@ main(args)
 ├─ try: WksWorkFlow.execScheduledJob(args)
 │   │
 │   ├─ [サーバ0] 接続情報読込み
+│   │   ├─ isAlive? No → WARNING: Server Not Active をログへ追記して次サーバへ
 │   │   ├─ update
 │   │   ├─ upgrade
 │   │   └─ shutdown (reboot)
 │   │
 │   ├─ [サーバ1] 接続情報読込み  ← PaperMCサーバ
+│   │   ├─ isAlive? No → WARNING: Server Not Active をログへ追記して次サーバへ
 │   │   ├─ stopPaperMC
 │   │   ├─ waitOneMin           ← sleep 60による安全停止待機
 │   │   ├─ update
@@ -113,11 +115,13 @@ main(args)
 │   │   └─ startPaperMC
 │   │
 │   ├─ [サーバ2] 接続情報読込み
+│   │   ├─ isAlive? No → WARNING: Server Not Active をログへ追記して次サーバへ
 │   │   ├─ update
 │   │   ├─ upgrade
 │   │   └─ shutdown (reboot)
 │   │
 │   ├─ [サーバ3] 接続情報読込み  ← Schubertサーバ
+│   │   ├─ isAlive? No → WARNING: Server Not Active をログへ追記して自サーバへ
 │   │   ├─ stopSchubert
 │   │   ├─ waitOneMin           ← sleep 60による安全停止待機
 │   │   ├─ update
