@@ -248,5 +248,9 @@ public class WksConstants {
      * SSH接続時KnownHostオプションの設定値
      */
     public static final String OTHER_SSH_CONFIG_VAL = "no";
+    /**
+     * SSH接続時KnownHostオプションの設定値
+     */
+    public static final String OTHER_NOT_ALIVE_MSG = "WARNING: Server Not Active";
 
 }

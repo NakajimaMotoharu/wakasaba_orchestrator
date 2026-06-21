@@ -102,6 +102,7 @@
 | `OTHER_CHANNEL_EXEC_OPTION` | `String` | `"exec"`                                   | JSch の `openChannel` に渡すチャンネル種別 |
 | `OTHER_SSH_CONFIG`          | `String` | `"StrictHostKeyChecking"`                  | SSH接続設定キー（known_hostsチェック）      |
 | `OTHER_SSH_CONFIG_VAL`      | `String` | `"no"`                                     | known_hostsチェックを無効化する設定値        |
+| `OTHER_NOT_ALIVE_MSG`       | `String` | `"WARNING: Server Not Active"`             | 非アクティブサーバをスキップした場合の警告ログ         |
 
 ---
 

@@ -90,6 +90,12 @@
 - `sh /home/mini/schubert/start_schubert.sh` を対象サーバ上で実行できること。
 - 両コマンドの実行前にSSH疎通確認を行い、実行コマンドおよび標準出力をグローバルログへ記録すること。
 
+### SC-12：処理開始時のサーバ疎通判定
+
+- `WksWorkFlow` から指定された接続情報に対して、対象サーバへSSH接続可能か判定できること。
+- 判定には `SshExec.isAlive()` を使用し、コマンド実行および標準出力ログの追加は行わないこと。
+- 疎通可能な場合は `true`、疎通不可の場合は `false` を返却すること。
+
 ---
 
 ## 要求インタフェース
@@ -102,21 +108,22 @@
 
 ### メソッド
 
-| メソッド名                 | 戻り値型   | 修飾子              | 要件概要                                             |
-|-----------------------|--------|------------------|--------------------------------------------------|
-| `update`              | `void` | `public static`  | `CMD_UPDATE` を引数に `runCommand` を呼び出すラッパー         |
-| `upgrade`             | `void` | `public static`  | `CMD_UPGRADE` を引数に `runCommand` を呼び出すラッパー        |
-| `shutdown`            | `void` | `public static`  | `CMD_SHUTDOWN` を引数に `runCommand` を呼び出すラッパー       |
-| `stopPaperMC`         | `void` | `public static`  | `CMD_PAPERMC_END` を引数に `runCommand` を呼び出すラッパー    |
-| `waitOneMin`          | `void` | `public static`  | `CMD_WAIT_ONE_MIN` を引数に `runCommand` を呼び出すラッパー   |
-| `startSchubert`       | `void` | `public static`  | `CMD_SCHUBERT_START` を引数に `runCommand` を呼び出すラッパー |
-| `stopSchubert`        | `void` | `public static`  | `CMD_SCHUBERT_END` を引数に `runCommand` を呼び出すラッパー   |
-| `startPaperMC`        | `void` | `public static`  | `CMD_PAPERMC_START` を引数に `runCommand` を呼び出すラッパー  |
-| `backupPaperMC`       | `void` | `public static`  | `CMD_PAPERMC_BACKUP` を引数に `runCommand` を呼び出すラッパー |
-| `wgetPaperMc`         | `void` | `public static`  | PaperMC/Pl3xMap JARをリモートサーバへダウンロードする             |
-| `movePaperMc`         | `void` | `public static`  | SHA検証後に本番ディレクトリへJARを移動する                         |
-| `runCommand`          | `void` | `private static` | 疎通確認後にコマンドを実行しログを記録する共通処理                        |
-| `waitForBecomeActive` | `void` | `private static` | SSH接続可能になるまでポーリング待機する                            |
+| メソッド名                 | 戻り値型      | 修飾子              | 要件概要                                             |
+|-----------------------|-----------|------------------|--------------------------------------------------|
+| `update`              | `void`    | `public static`  | `CMD_UPDATE` を引数に `runCommand` を呼び出すラッパー         |
+| `upgrade`             | `void`    | `public static`  | `CMD_UPGRADE` を引数に `runCommand` を呼び出すラッパー        |
+| `shutdown`            | `void`    | `public static`  | `CMD_SHUTDOWN` を引数に `runCommand` を呼び出すラッパー       |
+| `stopPaperMC`         | `void`    | `public static`  | `CMD_PAPERMC_END` を引数に `runCommand` を呼び出すラッパー    |
+| `waitOneMin`          | `void`    | `public static`  | `CMD_WAIT_ONE_MIN` を引数に `runCommand` を呼び出すラッパー   |
+| `startSchubert`       | `void`    | `public static`  | `CMD_SCHUBERT_START` を引数に `runCommand` を呼び出すラッパー |
+| `stopSchubert`        | `void`    | `public static`  | `CMD_SCHUBERT_END` を引数に `runCommand` を呼び出すラッパー   |
+| `startPaperMC`        | `void`    | `public static`  | `CMD_PAPERMC_START` を引数に `runCommand` を呼び出すラッパー  |
+| `backupPaperMC`       | `void`    | `public static`  | `CMD_PAPERMC_BACKUP` を引数に `runCommand` を呼び出すラッパー |
+| `wgetPaperMc`         | `void`    | `public static`  | PaperMC/Pl3xMap JARをリモートサーバへダウンロードする             |
+| `movePaperMc`         | `void`    | `public static`  | SHA検証後に本番ディレクトリへJARを移動する                         |
+| `isAlive`             | `boolean` | `public static`  | 対象サーバへSSH接続可能か判定する                               |
+| `runCommand`          | `void`    | `private static` | 疎通確認後にコマンドを実行しログを記録する共通処理                        |
+| `waitForBecomeActive` | `void`    | `private static` | SSH接続可能になるまでポーリング待機する                            |
 
 ---
 
@@ -133,6 +140,7 @@
 ## 制約・注意事項
 
 - `runCommand` はコマンド実行前に必ず `waitForBecomeActive` を呼ぶため、再起動中のサーバへも自動で待機・リトライが行われること。
+- `isAlive` は `WksWorkFlow` の処理開始時疎通確認で使用し、非アクティブサーバをスキップするための判定値を返すこと。
 - `movePaperMc` は `runCommand` を経由せず、`SshExec` を直接操作してコマンドを実行すること。SHA検証の結果によってコマンドの実行有無を制御する必要があるため、共通処理である
   `runCommand` には委譲できない設計となっている。
 - `movePaperMc` におけるPl3xMapの旧ファイル削除（`CMD_PL3XMAP_RM`）は、新バージョンのダウンロード有無にかかわらず**常に実行

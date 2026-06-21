@@ -19,6 +19,7 @@
 - 全サーバ（サーバ0・サーバ1・サーバ2・サーバ3・自サーバ）への処理シーケンスを1箇所に集約して定義すること。
 - 各サーバへの処理は直列に実行し、前サーバの全処理完了後に次サーバの処理を開始すること。
 - 実行順序は サーバ0 → サーバ1 → サーバ2 → サーバ3 → 自サーバ の順に固定すること。
+- リモートサーバ（サーバ0～3）は、処理開始時点で `SshCommand.isAlive(ci)` による疎通確認を行い、疎通不可の場合は警告ログを記録して対象サーバの処理をスキップすること。
 
 ### WF-02：サーバ0 のOSメンテナンス（SSH）
 
@@ -26,9 +27,11 @@
 
 1. 接続情報ファイルを読み込み `ConnectionInformation` を生成する
 2. サーバ処理開始区切りログをグローバルログへ追記する
-3. `SshCommand.update(ci)` を実行する
-4. `SshCommand.upgrade(ci)` を実行する
-5. `SshCommand.shutdown(ci)` を実行する
+3. `SshCommand.isAlive(ci)` を実行する
+4. 疎通可能な場合のみ `SshCommand.update(ci)` を実行する
+5. 疎通可能な場合のみ `SshCommand.upgrade(ci)` を実行する
+6. 疎通可能な場合のみ `SshCommand.shutdown(ci)` を実行する
+7. 疎通不可の場合は `WksConstants.OTHER_NOT_ALIVE_MSG` をログへ追記し、サーバ1の処理へ進む
 
 ### WF-03：サーバ1 のPaperMCサーバメンテナンス（SSH）
 
@@ -36,17 +39,19 @@
 
 1. 接続情報ファイルを読み込み `ConnectionInformation` を生成する
 2. サーバ処理開始区切りログをグローバルログへ追記する
-3. `SshCommand.stopPaperMC(ci)` を実行する
-4. PaperMCの安全停止を待つため `SshCommand.waitOneMin(ci)` を実行する
-5. `SshCommand.update(ci)` を実行する
-6. `SshCommand.upgrade(ci)` を実行する
-7. `SshCommand.backupPaperMC(ci)` を実行する
-8. `SshCommand.wgetPaperMc(ci)` を実行する
-9. `SshCommand.movePaperMc(ci)` を実行する
-10. `SshCommand.shutdown(ci)` を実行する
+3. `SshCommand.isAlive(ci)` を実行する
+4. 疎通可能な場合のみ `SshCommand.stopPaperMC(ci)` を実行する
+5. 疎通可能な場合のみPaperMCの安全停止を待つため `SshCommand.waitOneMin(ci)` を実行する
+6. 疎通可能な場合のみ `SshCommand.update(ci)` を実行する
+7. 疎通可能な場合のみ `SshCommand.upgrade(ci)` を実行する
+8. 疎通可能な場合のみ `SshCommand.backupPaperMC(ci)` を実行する
+9. 疎通可能な場合のみ `SshCommand.wgetPaperMc(ci)` を実行する
+10. 疎通可能な場合のみ `SshCommand.movePaperMc(ci)` を実行する
+11. 疎通可能な場合のみ `SshCommand.shutdown(ci)` を実行する
     - 再起動後の接続待機は `SshCommand` 内の `waitForBecomeActive` が自動的に処理する（FR-04 ステップ8に相当）。
       `WksWorkFlow` 側での明示的な待機処理は不要
-11. `SshCommand.startPaperMC(ci)` を実行する
+12. 疎通可能な場合のみ `SshCommand.startPaperMC(ci)` を実行する
+13. 疎通不可の場合は `WksConstants.OTHER_NOT_ALIVE_MSG` をログへ追記し、サーバ2の処理へ進む
 
 ### WF-04：サーバ2 のOSメンテナンス（SSH）
 
@@ -54,9 +59,11 @@
 
 1. 接続情報ファイルを読み込み `ConnectionInformation` を生成する
 2. サーバ処理開始区切りログをグローバルログへ追記する
-3. `SshCommand.update(ci)` を実行する
-4. `SshCommand.upgrade(ci)` を実行する
-5. `SshCommand.shutdown(ci)` を実行する
+3. `SshCommand.isAlive(ci)` を実行する
+4. 疎通可能な場合のみ `SshCommand.update(ci)` を実行する
+5. 疎通可能な場合のみ `SshCommand.upgrade(ci)` を実行する
+6. 疎通可能な場合のみ `SshCommand.shutdown(ci)` を実行する
+7. 疎通不可の場合は `WksConstants.OTHER_NOT_ALIVE_MSG` をログへ追記し、サーバ3の処理へ進む
 
 ### WF-05：サーバ3 のSchubertサーバメンテナンス（SSH）
 
@@ -64,12 +71,14 @@
 
 1. 接続情報ファイルを読み込み `ConnectionInformation` を生成する
 2. サーバ処理開始区切りログをグローバルログへ追記する
-3. `SshCommand.stopSchubert(ci)` を実行する
-4. Schubertの安全停止を待つため `SshCommand.waitOneMin(ci)` を実行する
-5. `SshCommand.update(ci)` を実行する
-6. `SshCommand.upgrade(ci)` を実行する
-7. `SshCommand.shutdown(ci)` を実行する
-8. `SshCommand.startSchubert(ci)` を実行する
+3. `SshCommand.isAlive(ci)` を実行する
+4. 疎通可能な場合のみ `SshCommand.stopSchubert(ci)` を実行する
+5. 疎通可能な場合のみSchubertの安全停止を待つため `SshCommand.waitOneMin(ci)` を実行する
+6. 疎通可能な場合のみ `SshCommand.update(ci)` を実行する
+7. 疎通可能な場合のみ `SshCommand.upgrade(ci)` を実行する
+8. 疎通可能な場合のみ `SshCommand.shutdown(ci)` を実行する
+9. 疎通可能な場合のみ `SshCommand.startSchubert(ci)` を実行する
+10. 疎通不可の場合は `WksConstants.OTHER_NOT_ALIVE_MSG` をログへ追記し、自サーバ処理へ進む
 
 ### WF-06：自サーバのOSメンテナンス（Bash）
 
@@ -117,6 +126,7 @@
 
 - サーバ1はPaperMCサーバであり、PaperMC固有の処理が含まれること。
 - サーバ3はSchubertサーバであり、Schubert停止・起動シェルの実行を含むこと。
+- リモートサーバが処理開始時点で非アクティブの場合、そのサーバの保守処理は実行せず、警告ログを出して後続サーバへ進むこと。
 - Schubert停止後は固定60秒待機し、停止状態の動的確認は行わず後続処理へ進むこと。
 - PaperMC停止後はグレースフルシャットダウン、ファイルクローズおよびセーブデータのフラッシュ完了を待つため、固定60秒の待機を行うこと。
 - 60秒経過時点で停止状態の動的確認は行わず、異常停止状態であっても後続処理を継続すること。
