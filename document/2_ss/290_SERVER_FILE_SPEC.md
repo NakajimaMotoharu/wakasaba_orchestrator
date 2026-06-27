@@ -2,7 +2,7 @@
 
 ## 概要
 
-本アプリケーションはコマンドライン引数として4つのサーバ接続情報ファイルのパスを受け取る。  
+本アプリケーションはコマンドライン引数として5つのサーバ接続情報ファイルのパスを受け取る。  
 各ファイルは `ConnectionInformation.getCiFromFile()` によって読み込まれ、SSH接続情報としてパースされる。
 
 ---
@@ -45,7 +45,8 @@ java -jar wakasaba_orchestrator-1.0-SNAPSHOT-all.jar \
   /path/to/server0.txt \
   /path/to/server1.txt \
   /path/to/server2.txt \
-  /path/to/server3.txt
+  /path/to/server3.txt \
+  /path/to/server4.txt
 ```
 
 | 引数インデックス                 | 対象サーバ             | 処理内容                                             |
@@ -54,6 +55,7 @@ java -jar wakasaba_orchestrator-1.0-SNAPSHOT-all.jar \
 | `args[1]` / `servers[1]` | サーバ1（PaperMCサーバ）  | PaperMC停止・60秒待機・OSアップデート・バックアップ・PaperMC更新・再起動・起動 |
 | `args[2]` / `servers[2]` | サーバ2              | OSアップデート・アップグレード・再起動                             |
 | `args[3]` / `servers[3]` | サーバ3（Schubertサーバ） | Schubert停止・60秒待機・OSアップデート・再起動・Schubert起動         |
+| `args[4]` / `servers[4]` | サーバ4（VPNサーバ）      | OSアップデート・アップグレード・再起動                             |
 
 ---
 

@@ -114,6 +114,23 @@ public class WksWorkFlow {
             log.add(WksConstants.OTHER_NOT_ALIVE_MSG);
         }
 
+        // サーバ4
+        // サーバ4の接続情報を設定
+        ConnectionInformation ci4 = ConnectionInformation.getCiFromFile(servers[4]);
+        // サーバ4の接続情報をログに設定
+        log.add(String.format(WksConstants.LOG_SPLIT, ci4));
+        // ci4がアクティブであれば実行
+        if (SshCommand.isAlive(ci4)){
+            // updateコマンド実行
+            SshCommand.update(ci4);
+            // upgradeコマンド実行
+            SshCommand.upgrade(ci4);
+            // shutdownコマンド実行
+            SshCommand.shutdown(ci4);
+        } else {
+            log.add(WksConstants.OTHER_NOT_ALIVE_MSG);
+        }
+
         // 自サーバ
         // 自サーバの接続情報をログに設定
         log.add(String.format(WksConstants.LOG_SPLIT, WksConstants.LOG_THIS_SERVER));

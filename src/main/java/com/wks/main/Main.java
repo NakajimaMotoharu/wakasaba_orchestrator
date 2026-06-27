@@ -25,12 +25,12 @@ public class Main {
     /**
      * エントリポイント
      *
-     * @param args 4つ要求(すべてサーバの接続用データ)
+     * @param args 5つ要求(すべてサーバの接続用データ)
      * @throws IOException ログファイル書き込み失敗
      */
     public static void main(String[] args) throws IOException {
-        if (args.length == 4) {
-            // 引数が4つあるとき正常実行開始
+        if (args.length == 5) {
+            // 引数が5つあるとき正常実行開始
             // 開始ログ書き込み
             log.add(String.format(WksConstants.LOG_START_TIME, getDateTime()));
 
@@ -52,7 +52,7 @@ public class Main {
             // ログファイル出力
             outLog(String.format(WksConstants.PATH_EXEC_LOG, getDateTime()));
         } else {
-            // 引数が4つないときは引数不足時のメッセージを出力し終了
+            // 引数が5つないときは引数不足時のメッセージを出力し終了
             System.out.println(WksConstants.OTHER_ARGS_MSG);
         }
 

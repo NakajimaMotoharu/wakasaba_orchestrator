@@ -53,7 +53,7 @@ public static void main(String[] args) throws IOException;
 #### 処理フロー
 
 ```
-args.length == 4 ?
+args.length == 5 ?
   Yes:
     1. log に開始時刻を追記（WksConstants.LOG_START_TIME）
     2. try 内で WksWorkFlow.execScheduledJob(args) を呼び出す
@@ -72,7 +72,7 @@ args.length == 4 ?
 
 | 引数名    | 型          | 説明                                 |
 |--------|------------|------------------------------------|
-| `args` | `String[]` | コマンドライン引数。4要素必須（各要素はサーバ接続情報ファイルパス） |
+| `args` | `String[]` | コマンドライン引数。5要素必須（各要素はサーバ接続情報ファイルパス） |
 
 #### 例外
 
