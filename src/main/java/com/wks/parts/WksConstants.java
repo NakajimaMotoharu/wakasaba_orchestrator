@@ -219,7 +219,7 @@ public class WksConstants {
     /**
      * 引数異常時に表示するUSAGE
      */
-    public static final String OTHER_ARGS_MSG = "The length of the arguments must be 4.";
+    public static final String OTHER_ARGS_MSG = "The length of the arguments must be 5.";
     /**
      * タイムゾーン
      */
@@ -249,7 +249,7 @@ public class WksConstants {
      */
     public static final String OTHER_SSH_CONFIG_VAL = "no";
     /**
-     * SSH接続時KnownHostオプションの設定値
+     * サーバが現在アクティブ出ないときの警告メッセージ
      */
     public static final String OTHER_NOT_ALIVE_MSG = "WARNING: Server Not Active";
 

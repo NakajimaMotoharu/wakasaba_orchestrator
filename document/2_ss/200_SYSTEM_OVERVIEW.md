@@ -23,7 +23,7 @@
 ### 実行コマンド例
 
 ```bash
-java -jar wakasaba_orchestrator-1.0-SNAPSHOT-all.jar <server0_file> <server1_file> <server2_file> <server3_file>
+java -jar wakasaba_orchestrator-1.0-SNAPSHOT-all.jar <server0_file> <server1_file> <server2_file> <server3_file> <server4_file>
 ```
 
 各引数はサーバ接続情報ファイルのパスを示す。ファイルフォーマットについては [補足資料：接続情報ファイル仕様](./290_SERVER_FILE_SPEC)
@@ -59,7 +59,7 @@ com.wks
 | クラス名                                                 | パッケージ              | 種別     | 役割                                 |
 |------------------------------------------------------|--------------------|--------|------------------------------------|
 | [Main](./201_Main)                                   | `com.wks.main`     | class  | エントリポイント。引数検証・ログ管理・ログファイル出力        |
-| [WksWorkFlow](./202_WksWorkFlow)                     | `com.wks.workflow` | class  | 4台のリモートサーバ＋自サーバへの処理シーケンス定義         |
+| [WksWorkFlow](./202_WksWorkFlow)                     | `com.wks.workflow` | class  | 5台のリモートサーバ＋自サーバへの処理シーケンス定義         |
 | [SshCommand](./203_SshCommand)                       | `com.wks.cmd`      | class  | SSH経由コマンド実行の業務ロジックラッパー             |
 | [PaperUrlGen](./204_PaperUrlGen)                     | `com.wks.papermc`  | class  | PaperMC・Pl3xMap APIレスポンスJSONパーサ    |
 | [ConnectionInformation](./205_ConnectionInformation) | `com.wks.util`     | record | サーバ接続情報（host/port/user/key）の保持と読込み |
@@ -88,7 +88,7 @@ com.wks
 ```
 main(args)
 │
-├─ [引数チェック] args.length == 4 ?
+├─ [引数チェック] args.length == 5 ?
 │     No  → USAGEメッセージ出力して終了
 │     Yes ↓
 │
@@ -121,13 +121,19 @@ main(args)
 │   │   └─ shutdown (reboot)
 │   │
 │   ├─ [サーバ3] 接続情報読込み  ← Schubertサーバ
-│   │   ├─ isAlive? No → WARNING: Server Not Active をログへ追記して自サーバへ
+│   │   ├─ isAlive? No → WARNING: Server Not Active をログへ追記してサーバ4へ
 │   │   ├─ stopSchubert
 │   │   ├─ waitOneMin           ← sleep 60による安全停止待機
 │   │   ├─ update
 │   │   ├─ upgrade
 │   │   ├─ shutdown (reboot)
 │   │   └─ startSchubert
+│   │
+│   ├─ [サーバ4] 接続情報読込み  ← VPNサーバ
+│   │   ├─ isAlive? No → WARNING: Server Not Active をログへ追記して自サーバへ
+│   │   ├─ update
+│   │   ├─ upgrade
+│   │   └─ shutdown (reboot)
 │   │
 │   └─ [自サーバ] BashExec経由で実行
 │       ├─ update
