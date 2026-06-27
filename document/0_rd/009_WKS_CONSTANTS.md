@@ -99,7 +99,7 @@
 
 | 定数名                         | 値                                        | 説明                             |
 |-----------------------------|------------------------------------------|--------------------------------|
-| `OTHER_ARGS_MSG`            | `The length of the arguments must be 4.` | 引数不足時のUSAGEメッセージ               |
+| `OTHER_ARGS_MSG`            | `The length of the arguments must be 5.` | 引数不足時のUSAGEメッセージ               |
 | `OTHER_TIME_ZONE`           | `Asia/Tokyo`                             | 日時文字列生成に使用するタイムゾーン             |
 | `OTHER_DATE_TIME_FMT`       | `yyyyMMddHHmmss`                         | 日時フォーマット文字列                    |
 | `OTHER_USER_AGENT`          | `wakasaba_orchestrator/1.0`              | HTTPリクエストのUser-Agent文字列        |
