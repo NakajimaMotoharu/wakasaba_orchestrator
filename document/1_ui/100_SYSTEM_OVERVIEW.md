@@ -10,22 +10,23 @@
 - [処理フロー概要](#処理フロー概要)
 - [例外ハンドリング方針](#例外ハンドリング方針)
 - [ログ設計](#ログ設計)
+- [出力ファイル](#出力ファイル)
 - [外部連携](#外部連携)
 
 ---
 
 ## システム概要
 
-| 項目       | 内容                                                                                                                                |
-|----------|-----------------------------------------------------------------------------------------------------------------------------------|
-| システム名    | wakasaba_orchestrator                                                                                                             |
-| 目的       | 複数のLinuxサーバに対して定型メンテナンス処理（OS更新・PaperMCサーバ更新・バックアップ等）を自動実行するオーケストレーションバッチ                                                          |
-| 実行環境     | Java 21 以上（`SequencedCollection`（`List.getFirst()` 等）および `HttpClient` の `AutoCloseable` 対応を使用）/ Gradle ビルド                        |
-| 実行形式     | Fat JAR（Shadow JAR）によるコマンドライン実行                                                                                                   |
-| エントリポイント | `com.wks.main.Main`                                                                                                               |
-| 対象サーバ構成  | リモートサーバ5台（SSH接続）＋自サーバ1台（ローカル実行）                                                                                                   |
-| ビルドツール   | Gradle / Shadow Plugin 9.3.2                                                                                                      |
-| 実行コマンド例  | `java -jar wakasaba_orchestrator-1.0-SNAPSHOT-all.jar <server0_file> <server1_file> <server2_file> <server3_file> <server4_file>` |
+| 項目             | 内容                                                                                                                               |
+|------------------|------------------------------------------------------------------------------------------------------------------------------------|
+| システム名       | wakasaba_orchestrator                                                                                                              |
+| 目的             | 複数のLinuxサーバに対して定型メンテナンス処理（OS更新・PaperMCサーバ更新・バックアップ等）を自動実行するオーケストレーションバッチ |
+| 実行環境         | Java 21 以上（`SequencedCollection`（`List.getFirst()` 等）および `HttpClient` の `AutoCloseable` 対応を使用）/ Gradle ビルド      |
+| 実行形式         | Fat JAR（Shadow JAR）によるコマンドライン実行                                                                                      |
+| エントリポイント | `com.wks.main.Main`                                                                                                                |
+| 対象サーバ構成   | リモートサーバ5台（SSH接続）＋自サーバ1台（ローカル実行）                                                                          |
+| ビルドツール     | Gradle / Shadow Plugin 9.3.2                                                                                                       |
+| 実行コマンド例   | `java -jar wakasaba_orchestrator-1.0-SNAPSHOT-all.jar <server0_file> <server1_file> <server2_file> <server3_file> <server4_file>`  |
 
 ---
 
@@ -54,17 +55,17 @@ com.wks
 
 ## クラス一覧
 
-| クラス名                    | パッケージ              | 種別     | 役割                                     |
-|-------------------------|--------------------|--------|----------------------------------------|
-| `Main`                  | `com.wks.main`     | class  | エントリポイント。引数検証・ワークフロー起動・ログファイル出力        |
-| `WksWorkFlow`           | `com.wks.workflow` | class  | 5台のリモートサーバ＋自サーバへの処理シーケンスを順次実行          |
-| `SshCommand`            | `com.wks.cmd`      | class  | SSH経由コマンド実行の業務ロジックラッパー。サーバ応答待機を含む      |
-| `PaperUrlGen`           | `com.wks.papermc`  | class  | PaperMC API・Modrinth API のJSONレスポンス解析  |
-| `ConnectionInformation` | `com.wks.util`     | record | SSH接続情報（host/port/user/key）の保持とファイル読込み |
-| `SshExec`               | `com.wks.util`     | class  | JSch を使用した SSH セッション確立・コマンド実行・疎通確認     |
-| `BashExec`              | `com.wks.util`     | class  | ProcessBuilder によるローカル Bash コマンド実行     |
-| `Curl`                  | `com.wks.util`     | class  | Java 標準 HttpClient による HTTP GET リクエスト  |
-| `WksConstants`          | `com.wks.parts`    | class  | アプリケーション全体で使用する定数の一元管理                 |
+| クラス名                | パッケージ         | 種別   | 役割                                                            |
+|-------------------------|--------------------|--------|-----------------------------------------------------------------|
+| `Main`                  | `com.wks.main`     | class  | エントリポイント。引数検証・ワークフロー起動・ログファイル出力  |
+| `WksWorkFlow`           | `com.wks.workflow` | class  | 5台のリモートサーバ＋自サーバへの処理シーケンスを順次実行       |
+| `SshCommand`            | `com.wks.cmd`      | class  | SSH経由コマンド実行の業務ロジックラッパー。サーバ応答待機を含む |
+| `PaperUrlGen`           | `com.wks.papermc`  | class  | PaperMC API・Modrinth API のJSONレスポンス解析                  |
+| `ConnectionInformation` | `com.wks.util`     | record | SSH接続情報（host/port/user/key）の保持とファイル読込み         |
+| `SshExec`               | `com.wks.util`     | class  | JSch を使用した SSH セッション確立・コマンド実行・疎通確認      |
+| `BashExec`              | `com.wks.util`     | class  | ProcessBuilder によるローカル Bash コマンド実行                 |
+| `Curl`                  | `com.wks.util`     | class  | Java 標準 HttpClient による HTTP GET リクエスト                 |
+| `WksConstants`          | `com.wks.parts`    | class  | アプリケーション全体で使用する定数の一元管理                    |
 
 ---
 
@@ -94,12 +95,12 @@ Main
 
 ## 依存ライブラリ
 
-| ライブラリ                                 | バージョン              | 用途                       |
-|---------------------------------------|--------------------|--------------------------|
-| `com.github.mwiede:jsch`              | 最新版（`+`指定）         | SSH接続・コマンド実行（JSch フォーク版） |
-| `tools.jackson.core:jackson-core`     | 最新版（`+`指定）         | JSON解析（コア）               |
-| `tools.jackson.core:jackson-databind` | 最新版（`+`指定）         | JSON解析（ObjectMapper）     |
-| `org.junit.jupiter:junit-jupiter`     | JUnit BOM 5.10.0準拠 | テスト用（Fat JAR には含まれない）    |
+| ライブラリ                            | バージョン           | 用途                                     |
+|---------------------------------------|----------------------|------------------------------------------|
+| `com.github.mwiede:jsch`              | 最新版（`+`指定）    | SSH接続・コマンド実行（JSch フォーク版） |
+| `tools.jackson.core:jackson-core`     | 最新版（`+`指定）    | JSON解析（コア）                         |
+| `tools.jackson.core:jackson-databind` | 最新版（`+`指定）    | JSON解析（ObjectMapper）                 |
+| `org.junit.jupiter:junit-jupiter`     | JUnit BOM 5.10.0準拠 | テスト用（Fat JAR には含まれない）       |
 
 ---
 
@@ -129,7 +130,7 @@ main(args)
 │   │   ├─ apt update
 │   │   ├─ apt upgrade -y
 │   │   ├─ バックアップシェル実行
-│   │   ├─ PaperMC / Pl3xMap 最新版ダウンロード（API 取得 → wget）
+│   │   ├─ PaperMC正式版選択・Pl3xMapダウンロード → 管理端末へバージョンファイル出力
 │   │   ├─ SHA検証 → 本番ディレクトリへ配置
 │   │   ├─ shutdown -r now（即時再起動）
 │   │   └─ PaperMC サービス起動
@@ -172,16 +173,18 @@ main(args)
 - 各クラスの業務メソッドは検査例外を `throws` で `Main.main` まで委譲する。個別の回復処理は行わない。
 - `Main.main` はワークフロー実行中の `Exception` を捕捉し、スタックトレースをログへ追記した後、終了時刻記録とログファイル出力へ進む。
 - `Main.outLog` が送出する `IOException` は捕捉せずJVMへ伝播する。
+- PaperMCの正式版未検出時は `RuntimeException`、バージョンファイルのオープン失敗時は `FileNotFoundException`（
+  `IOException`）が発生し、ワークフローの後続処理を中断して `Main.main` でログへ記録する。
 - `SshExec.isAlive()` 内部のみ例外を吸収する。`session.connect()` が投げるすべての `JSchException` を `false`
   として返す。処理開始時疎通確認では非アクティブサーバのスキップ判定に使用し、再起動待ちではポーリング継続判定に使用する。
 
-| 例外クラス                            | 主な発生状況                                                |
-|----------------------------------|-------------------------------------------------------|
-| `IOException`                    | ファイル読込・SSH出力読取・HTTP通信・ログ書込失敗・ログ出力先ディレクトリ不在またはファイル生成失敗 |
-| `InterruptedException`           | SSH / HTTP 待機中・`process.waitFor()` 中の割り込み             |
-| `JSchException`                  | SSH セッション生成・接続・チャンネル接続失敗                              |
-| `NumberFormatException`（非検査）     | 接続情報ファイルのポート番号が整数でない                                  |
-| `IndexOutOfBoundsException`（非検査） | 接続情報ファイルの行数が4行未満                                      |
+| 例外クラス                            | 主な発生状況                                                                                        |
+|---------------------------------------|-----------------------------------------------------------------------------------------------------|
+| `IOException`                         | ファイル読込・SSH出力読取・HTTP通信・ログ書込失敗・ログ出力先ディレクトリ不在またはファイル生成失敗 |
+| `InterruptedException`                | SSH / HTTP 待機中・`process.waitFor()` 中の割り込み                                                 |
+| `JSchException`                       | SSH セッション生成・接続・チャンネル接続失敗                                                        |
+| `NumberFormatException`（非検査）     | 接続情報ファイルのポート番号が整数でない                                                            |
+| `IndexOutOfBoundsException`（非検査） | 接続情報ファイルの行数が4行未満                                                                     |
 
 ---
 
@@ -196,15 +199,31 @@ main(args)
 
 ### ログに記録される内容
 
-| 種別          | フォーマット例                                                                      |
-|-------------|------------------------------------------------------------------------------|
-| バッチ開始時刻     | `Batch start time: 20240101120000`                                           |
-| バッチ終了時刻     | `Batch end time: 20240101130000`                                             |
-| サーバ処理開始区切り  | `/* --------Job start: {host: "x.x.x.x", port: 22, user: "mini"}-------- */` |
+| 種別                   | フォーマット例                                                               |
+|------------------------|------------------------------------------------------------------------------|
+| バッチ開始時刻         | `Batch start time: 20240101120000`                                           |
+| バッチ終了時刻         | `Batch end time: 20240101130000`                                             |
+| サーバ処理開始区切り   | `/* --------Job start: {host: "x.x.x.x", port: 22, user: "mini"}-------- */` |
 | 自サーバ処理開始区切り | `/* --------Job start: this server-------- */`                               |
-| 実行コマンド      | `$ sudo apt update`                                                          |
-| コマンド標準出力    | （コマンド実行結果の各行）                                                                |
-| 例外情報        | ワークフロー実行中に捕捉した例外のスタックトレース                                                    |
+| 実行コマンド           | `$ sudo apt update`                                                          |
+| コマンド標準出力       | （コマンド実行結果の各行）                                                   |
+| 例外情報               | ワークフロー実行中に捕捉した例外のスタックトレース                           |
+
+---
+
+## 出力ファイル
+
+| ファイル          | 管理端末上の出力先                                     | 内容・更新方式                                                                     |
+|-------------------|--------------------------------------------------------|------------------------------------------------------------------------------------|
+| 実行ログ          | `/home/mini/wakasaba_orchestrator/log/log_%s.txt`      | 終了時刻ごとの実行ログ。`PATH_WAKASABA_EXEC + "log/log_%s.txt"` から構成           |
+| PaperMCバージョン | `/home/mini/wakasaba_orchestrator/papermc_version.txt` | 取得対象のバージョン文字列のみ。既定文字コード、末尾改行なしで新規作成または上書き |
+
+PaperMCはAPI応答順に系列・候補を探索し、ハイフン（`-`
+）を含むpre・rc等を除外する。系列内に正式版がなければ次の系列へ進み、全系列に正式版がなければ実行時例外とする。数値比較・並べ替えは行わない。
+
+バージョンファイルは `wgetPaperMc` のPl3xMap条件分岐後、SHA検証・本番配置前に `PrintStream.print(version)` で出力する。
+本番配置・起動完了を示すものではなく、初期疎通確認によるスキップや出力到達前の例外発生時は以前のファイルが残る。
+出力先ディレクトリの存在、作成・上書き権限、十分なディスク容量を前提とし、親ディレクトリの自動作成や書き込み・クローズ時のエラーフラグ確認は行わない。
 
 ---
 
@@ -225,11 +244,11 @@ main(args)
 - ライブラリ: Java 標準 `java.net.http.HttpClient`（HTTP/1.1、接続タイムアウト60秒）
 - User-Agent: `wakasaba_orchestrator/1.0`
 
-| API          | 用途                         | エンドポイント                                                                   |
-|--------------|----------------------------|---------------------------------------------------------------------------|
-| PaperMC API  | バージョン一覧取得                  | `GET https://fill.papermc.io/v3/projects/paper`                           |
-| PaperMC API  | ビルド情報・ダウンロードURL・SHA256取得   | `GET https://fill.papermc.io/v3/projects/paper/versions/{version}/builds` |
-| Modrinth API | Pl3xMap ダウンロードURL・SHA512取得 | `GET https://api.modrinth.com/v2/project/pl3xmap/version`                 |
+| API          | 用途                                    | エンドポイント                                                            |
+|--------------|-----------------------------------------|---------------------------------------------------------------------------|
+| PaperMC API  | バージョン一覧取得                      | `GET https://fill.papermc.io/v3/projects/paper`                           |
+| PaperMC API  | ビルド情報・ダウンロードURL・SHA256取得 | `GET https://fill.papermc.io/v3/projects/paper/versions/{version}/builds` |
+| Modrinth API | Pl3xMap ダウンロードURL・SHA512取得     | `GET https://api.modrinth.com/v2/project/pl3xmap/version`                 |
 
 ### ローカルBash実行
 

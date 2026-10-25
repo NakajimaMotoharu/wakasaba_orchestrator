@@ -2,14 +2,14 @@
 
 ## 基本情報
 
-| 項目       | 内容                                                                          |
-|----------|-----------------------------------------------------------------------------|
-| 完全修飾クラス名 | `com.wks.papermc.PaperUrlGen`                                               |
-| ファイル名    | `PaperUrlGen.java`                                                          |
-| 種別       | class（public）                                                               |
-| 責務       | PaperMC API・Modrinth API から取得したJSONレスポンスを解析し、バージョン文字列・ダウンロードURL・チェックサムを抽出する |
-| 依存クラス    | `WksConstants`                                                              |
-| 依存ライブラリ  | `tools.jackson.databind.ObjectMapper`, `tools.jackson.databind.JsonNode`    |
+| 項目             | 内容                                                                                                                    |
+|------------------|-------------------------------------------------------------------------------------------------------------------------|
+| 完全修飾クラス名 | `com.wks.papermc.PaperUrlGen`                                                                                           |
+| ファイル名       | `PaperUrlGen.java`                                                                                                      |
+| 種別             | class（public）                                                                                                         |
+| 責務             | PaperMC API・Modrinth API から取得したJSONレスポンスを解析し、バージョン文字列・ダウンロードURL・チェックサムを抽出する |
+| 依存クラス       | `WksConstants`                                                                                                          |
+| 依存ライブラリ   | `tools.jackson.databind.ObjectMapper`, `tools.jackson.databind.JsonNode`                                                |
 
 ---
 
@@ -21,13 +21,13 @@
 
 ## メソッド一覧
 
-| メソッド名               | 戻り値型     | 修飾子             | 説明                                                |
-|---------------------|----------|-----------------|---------------------------------------------------|
-| `getPaperMcVersion` | `String` | `public static` | PaperMC バージョン一覧JSONから最新バージョン文字列を取得する              |
-| `getPaperMcUrl`     | `String` | `public static` | PaperMC ビルド情報JSONからダウンロードURLを取得する                 |
-| `getPaperMcSha256`  | `String` | `public static` | PaperMC ビルド情報JSONからSHA-256チェックサムを取得する             |
-| `getPl3xMapUrl`     | `String` | `public static` | Modrinth APIレスポンスJSONからPl3xMapのダウンロードURLを取得する     |
-| `getPl3xMapSha512`  | `String` | `public static` | Modrinth APIレスポンスJSONからPl3xMapのSHA-512チェックサムを取得する |
+| メソッド名          | 戻り値型 | 修飾子          | 説明                                                                         |
+|---------------------|----------|-----------------|------------------------------------------------------------------------------|
+| `getPaperMcVersion` | `String` | `public static` | PaperMCバージョン一覧JSONからpre・rc等を除外し、最新正式版の文字列を取得する |
+| `getPaperMcUrl`     | `String` | `public static` | PaperMC ビルド情報JSONからダウンロードURLを取得する                          |
+| `getPaperMcSha256`  | `String` | `public static` | PaperMC ビルド情報JSONからSHA-256チェックサムを取得する                      |
+| `getPl3xMapUrl`     | `String` | `public static` | Modrinth APIレスポンスJSONからPl3xMapのダウンロードURLを取得する             |
+| `getPl3xMapSha512`  | `String` | `public static` | Modrinth APIレスポンスJSONからPl3xMapのSHA-512チェックサムを取得する         |
 
 ---
 
@@ -41,43 +41,58 @@ public static String getPaperMcVersion(String json);
 
 #### 概要
 
-`GET https://fill.papermc.io/v3/projects/paper` のレスポンスから最新のPaperMCバージョンを取得する。
+`GET https://fill.papermc.io/v3/projects/paper` のレスポンスから、pre・rc等を除外した最新正式版のPaperMCバージョンを取得する。
 
 #### 処理フロー
 
 ```
 1. ObjectMapper でJSONをパース → src（JsonNode）
 2. src.get("versions") → majorVersion（JsonNode、Mapのような構造）
-3. majorVersion.propertyNames() からキー一覧をコレクション化し、先頭キーを取得
-4. majorVersion.get(先頭キー) → fullVersion（バージョン文字列の配列ノード）
-5. fullVersion.get(0).toString() → ダブルクオーテーション付きバージョン文字列
-6. ダブルクオーテーションを除去して返却
+3. version = WksConstants.JSON_ES、majorVersionFlag = false で初期化
+4. List.copyOf(majorVersion.propertyNames()) → majorVersionNames（API応答順）
+5. 各系列の majorVersionJNode を取得し、配列の先頭から候補を探索
+   ├─ version.contains(WksConstants.JSON_HYPHEN): 次の候補へ進む
+   └─ ハイフンなし: majorVersionFlag = true として内側・外側の探索を終了
+6. 系列内に正式版がなければ次の系列を探索
+7. !majorVersionFlag の場合、RuntimeException(WksConstants.OTHER_PAPERMC_EXCEPTION) を送出
+8. version のダブルクオーテーションを除去して返却
 ```
 
 #### 引数
 
-| 引数名    | 型        | 説明                                             |
-|--------|----------|------------------------------------------------|
+| 引数名 | 型       | 説明                                                      |
+|--------|----------|-----------------------------------------------------------|
 | `json` | `String` | PaperMC API（`/v3/projects/paper`）のレスポンスJSON文字列 |
 
 #### 戻り値
 
-| 型        | 説明                        |
-|----------|---------------------------|
-| `String` | 最新バージョン文字列（例: `"1.21.4"`） |
+| 型       | 説明                                         |
+|----------|----------------------------------------------|
+| `String` | 最新正式版のバージョン文字列（例: `"26.2"`） |
+
+#### 例外
+
+正式版未検出時（`versions` が空の場合を含む）は `RuntimeException` を送出する。
+メッセージは `OTHER_PAPERMC_EXCEPTION`（`Exception: No official version was found.`）とする。
+呼び出し元の `SshCommand`、`WksWorkFlow` を経由して `Main.main` で捕捉し、スタックトレースをログへ記録する。
 
 #### 対象JSONの構造（例）
 
 ```json
 {
   "versions": {
-    "1.21": [
-      "1.21.4",
-      "1.21.3"
+    "26.3": [
+      "26.3-rc-3"
+    ],
+    "26.2": [
+      "26.2-rc-2",
+      "26.2"
     ]
   }
 }
 ```
+
+この例では `26.2` を返す。
 
 ---
 
@@ -104,14 +119,14 @@ public static String getPaperMcUrl(String json);
 
 #### 引数
 
-| 引数名    | 型        | 説明                                                                       |
-|--------|----------|--------------------------------------------------------------------------|
+| 引数名 | 型       | 説明                                                                                |
+|--------|----------|-------------------------------------------------------------------------------------|
 | `json` | `String` | PaperMC API（`/v3/projects/paper/versions/{version}/builds`）のレスポンスJSON文字列 |
 
 #### 戻り値
 
-| 型        | 説明                   |
-|----------|----------------------|
+| 型       | 説明                               |
+|----------|------------------------------------|
 | `String` | JARファイルのダウンロードURL文字列 |
 
 #### 対象JSONの構造（例）
@@ -154,14 +169,14 @@ PaperMC ビルド情報JSONからSHA-256チェックサム文字列を取得す�
 
 #### 引数
 
-| 引数名    | 型        | 説明                                                        |
-|--------|----------|-----------------------------------------------------------|
+| 引数名 | 型       | 説明                                                                                |
+|--------|----------|-------------------------------------------------------------------------------------|
 | `json` | `String` | PaperMC ビルド情報APIのレスポンスJSON文字列（`getPaperMcUrl` と同一エンドポイント） |
 
 #### 戻り値
 
-| 型        | 説明                         |
-|----------|----------------------------|
+| 型       | 説明                                      |
+|----------|-------------------------------------------|
 | `String` | SHA-256ハッシュ値文字列（64文字の16進数） |
 
 ---
@@ -192,15 +207,15 @@ Pl3xMapの最新バージョンが対応するゲームバージョンがPaperMC
 
 #### 引数
 
-| 引数名       | 型        | 説明                                                       |
-|-----------|----------|----------------------------------------------------------|
+| 引数名    | 型       | 説明                                                                |
+|-----------|----------|---------------------------------------------------------------------|
 | `json`    | `String` | Modrinth API（`/v2/project/pl3xmap/version`）のレスポンスJSON文字列 |
-| `version` | `String` | PaperMCの最新バージョン文字列（比較対象）                                 |
+| `version` | `String` | PaperMCの最新バージョン文字列（比較対象）                           |
 
 #### 戻り値
 
-| 型        | 説明                             |
-|----------|--------------------------------|
+| 型       | 説明                                               |
+|----------|----------------------------------------------------|
 | `String` | ダウンロードURLまたは `null`（バージョン不一致時） |
 
 #### 対象JSONの構造（例）
@@ -250,21 +265,22 @@ Modrinth APIレスポンスJSONからPl3xMapのSHA-512チェックサム文字�
 
 #### 引数
 
-| 引数名       | 型        | 説明                         |
-|-----------|----------|----------------------------|
-| `json`    | `String` | Modrinth API のレスポンスJSON文字列 |
-| `version` | `String` | PaperMCの最新バージョン文字列（比較対象）   |
+| 引数名    | 型       | 説明                                      |
+|-----------|----------|-------------------------------------------|
+| `json`    | `String` | Modrinth API のレスポンスJSON文字列       |
+| `version` | `String` | PaperMCの最新バージョン文字列（比較対象） |
 
 #### 戻り値
 
-| 型        | 説明                                               |
-|----------|--------------------------------------------------|
+| 型       | 説明                                                                          |
+|----------|-------------------------------------------------------------------------------|
 | `String` | SHA-512ハッシュ値文字列（128文字の16進数）または `null`（バージョン不一致時） |
 
 ---
 
 ## 設計上の注意点
 
+- バージョン候補はAPI応答順に探索し、数値比較・並べ替えは行わない。正式版の判定はハイフンの有無のみであり、数字・ピリオドの正規表現検証は行わない。
 - すべてのメソッドが `ObjectMapper.readTree()` を直接呼び出している。`ObjectMapper.readTree()` は
   `JacksonException` を投げるが、Jackson 3.x では `JacksonException` は `RuntimeException`
   のサブクラスである非検査例外のため、メソッドシグネチャに `throws` 宣言は不要であり問題なく動作する。

@@ -2,42 +2,42 @@
 
 ## 基本情報
 
-| 項目       | 内容                                                                           |
-|----------|------------------------------------------------------------------------------|
-| 完全修飾クラス名 | `com.wks.cmd.SshCommand`                                                     |
-| ファイル名    | `SshCommand.java`                                                            |
-| 種別       | class（public）                                                                |
-| 責務       | SSH経由で実行する各種コマンドの業務ロジックラッパー。コマンドの組み立て・実行・ログ記録を集約する                           |
-| 主な依存クラス  | `Main`、`SshExec`、`ConnectionInformation`、`Curl`、`PaperUrlGen`、`WksConstants` |
+| 項目             | 内容                                                                                              |
+|------------------|---------------------------------------------------------------------------------------------------|
+| 完全修飾クラス名 | `com.wks.cmd.SshCommand`                                                                          |
+| ファイル名       | `SshCommand.java`                                                                                 |
+| 種別             | class（public）                                                                                   |
+| 責務             | SSH経由で実行する各種コマンドの業務ロジックラッパー。コマンドの組み立て・実行・ログ記録を集約する |
+| 主な依存クラス   | `Main`、`SshExec`、`ConnectionInformation`、`Curl`、`PaperUrlGen`、`WksConstants`                 |
 
 ---
 
 ## フィールド一覧
 
-| フィールド名 | 型                   | 修飾子                    | 説明                                         |
-|--------|---------------------|------------------------|--------------------------------------------|
-| `log`  | `ArrayList<String>` | `private static final` | `Main.log` への参照。実行コマンドと標準出力をログに追記するために使用する |
+| フィールド名 | 型                  | 修飾子                 | 説明                                                                      |
+|--------------|---------------------|------------------------|---------------------------------------------------------------------------|
+| `log`        | `ArrayList<String>` | `private static final` | `Main.log` への参照。実行コマンドと標準出力をログに追記するために使用する |
 
 ---
 
 ## メソッド一覧
 
-| メソッド名                 | 戻り値型      | 修飾子              | 説明                                          |
-|-----------------------|-----------|------------------|---------------------------------------------|
-| `update`              | `void`    | `public static`  | `sudo apt update` を実行する                     |
-| `upgrade`             | `void`    | `public static`  | `sudo apt upgrade -y` を実行する                 |
-| `shutdown`            | `void`    | `public static`  | `sudo shutdown -r now` を実行する                |
-| `stopPaperMC`         | `void`    | `public static`  | `sudo systemctl stop papermc` を実行する         |
-| `waitOneMin`          | `void`    | `public static`  | `sleep 60` を実行する                            |
-| `startSchubert`       | `void`    | `public static`  | Schubert起動シェルを実行する                          |
-| `stopSchubert`        | `void`    | `public static`  | Schubert停止シェルを実行する                          |
-| `startPaperMC`        | `void`    | `public static`  | `sudo systemctl start papermc` を実行する        |
-| `backupPaperMC`       | `void`    | `public static`  | バックアップシェルスクリプトを実行する                         |
-| `wgetPaperMc`         | `void`    | `public static`  | PaperMC・Pl3xMap の最新版 JAR をリモートサーバ上にダウンロードする |
-| `movePaperMc`         | `void`    | `public static`  | ダウンロード済み JAR を SHA 検証後に本番ディレクトリへ移動する        |
-| `isAlive`             | `boolean` | `public static`  | 対象サーバへ SSH 接続可能か判定する                        |
-| `runCommand`          | `void`    | `private static` | コマンド実行・ログ記録の共通処理                            |
-| `waitForBecomeActive` | `void`    | `private static` | 対象サーバが SSH 応答可能になるまでポーリング待機する               |
+| メソッド名            | 戻り値型  | 修飾子           | 説明                                                                         |
+|-----------------------|-----------|------------------|------------------------------------------------------------------------------|
+| `update`              | `void`    | `public static`  | `sudo apt update` を実行する                                                 |
+| `upgrade`             | `void`    | `public static`  | `sudo apt upgrade -y` を実行する                                             |
+| `shutdown`            | `void`    | `public static`  | `sudo shutdown -r now` を実行する                                            |
+| `stopPaperMC`         | `void`    | `public static`  | `sudo systemctl stop papermc` を実行する                                     |
+| `waitOneMin`          | `void`    | `public static`  | `sleep 60` を実行する                                                        |
+| `startSchubert`       | `void`    | `public static`  | Schubert起動シェルを実行する                                                 |
+| `stopSchubert`        | `void`    | `public static`  | Schubert停止シェルを実行する                                                 |
+| `startPaperMC`        | `void`    | `public static`  | `sudo systemctl start papermc` を実行する                                    |
+| `backupPaperMC`       | `void`    | `public static`  | バックアップシェルスクリプトを実行する                                       |
+| `wgetPaperMc`         | `void`    | `public static`  | PaperMC・Pl3xMap JARをダウンロードし、管理端末へバージョンファイルを出力する |
+| `movePaperMc`         | `void`    | `public static`  | ダウンロード済み JAR を SHA 検証後に本番ディレクトリへ移動する               |
+| `isAlive`             | `boolean` | `public static`  | 対象サーバへ SSH 接続可能か判定する                                          |
+| `runCommand`          | `void`    | `private static` | コマンド実行・ログ記録の共通処理                                             |
+| `waitForBecomeActive` | `void`    | `private static` | 対象サーバが SSH 応答可能になるまでポーリング待機する                        |
 
 ---
 
@@ -49,28 +49,28 @@
 
 各メソッドは対応する定数コマンドを引数として `runCommand(ci, コマンド定数)` を呼び出す単純なラッパー。
 
-| メソッド名           | 実行コマンド（定数名）          |
-|-----------------|----------------------|
-| `update`        | `CMD_UPDATE`         |
-| `upgrade`       | `CMD_UPGRADE`        |
-| `shutdown`      | `CMD_SHUTDOWN`       |
-| `stopPaperMC`   | `CMD_PAPERMC_END`    |
-| `waitOneMin`    | `CMD_WAIT_ONE_MIN`   |
-| `startSchubert` | `CMD_SCHUBERT_START` |
-| `stopSchubert`  | `CMD_SCHUBERT_END`   |
-| `startPaperMC`  | `CMD_PAPERMC_START`  |
-| `backupPaperMC` | `CMD_PAPERMC_BACKUP` |
+| メソッド名      | 実行コマンド（定数名） |
+|-----------------|------------------------|
+| `update`        | `CMD_UPDATE`           |
+| `upgrade`       | `CMD_UPGRADE`          |
+| `shutdown`      | `CMD_SHUTDOWN`         |
+| `stopPaperMC`   | `CMD_PAPERMC_END`      |
+| `waitOneMin`    | `CMD_WAIT_ONE_MIN`     |
+| `startSchubert` | `CMD_SCHUBERT_START`   |
+| `stopSchubert`  | `CMD_SCHUBERT_END`     |
+| `startPaperMC`  | `CMD_PAPERMC_START`    |
+| `backupPaperMC` | `CMD_PAPERMC_BACKUP`   |
 
 ---
 
 ### `wgetPaperMc(ConnectionInformation ci)`
 
-PaperMC および Pl3xMap の最新版 JAR ファイルをリモートサーバ上にダウンロードする。
+PaperMCの最新正式版および対応するPl3xMapのJARをリモートサーバ上にダウンロードし、管理端末へPaperMCバージョンファイルを出力する。
 
 ```
 1. userAgent = OTHER_USER_AGENT
 2. Curl.exec(userAgent, URL_PAPERMC_VERSION) → versionJson
-3. PaperUrlGen.getPaperMcVersion(versionJson) → version（例: "1.21.4"）
+3. PaperUrlGen.getPaperMcVersion(versionJson) → version（pre・rc等を除外した最新正式版）
 4. Curl.exec(userAgent, URL_PAPERMC_DL_URL % version) → urlJson
 5. PaperUrlGen.getPaperMcUrl(urlJson) → url
 6. cmd = CMD_WGET_PAPERMC % (userAgent, url) を組み立て
@@ -82,7 +82,14 @@ PaperMC および Pl3xMap の最新版 JAR ファイルをリモートサーバ�
    └─ null でない場合:
       10. cmd = CMD_WGET_PL3XMAP % (userAgent, pl3xMapUrl) を組み立て
       11. runCommand(ci, cmd) → リモートサーバ上で wget 実行、PATH_DL_PL3XMAP に保存
+
+12. 管理端末上で new PrintStream(PATH_PAPERMC_VERSION) → ps
+13. ps.print(version) → バージョン文字列を上書き（末尾改行なし）
+14. ps.close()
 ```
+
+出力先は `/home/mini/wakasaba_orchestrator/papermc_version.txt`。Pl3xMapのダウンロードをスキップした場合も出力する。
+文字コードは `PrintStream(String)` の既定値を使用する。出力はSHA検証・本番配置前であり、内容はダウンロード対象のバージョンを示す。
 
 ---
 
@@ -92,7 +99,7 @@ PaperMC および Pl3xMap の最新版 JAR ファイルをリモートサーバ�
 
 ```
 [事前情報取得]
-1. Curl.exec → versionJson → version
+1. Curl.exec → versionJson → PaperUrlGen.getPaperMcVersion → version（最新正式版）
 2. Curl.exec → sha256Json → expectedSHA256（PaperMC の SHA256 期待値）
 3. Curl.exec → sha512Json → expectedSHA512（Pl3xMap の SHA512 期待値。バージョン不一致時 null）
 
@@ -129,10 +136,10 @@ PaperMC および Pl3xMap の最新版 JAR ファイルをリモートサーバ�
 
 #### SHA 検証仕様
 
-| 対象          | アルゴリズム  | 期待値取得元                          | 比較文字数     |
-|-------------|---------|---------------------------------|-----------|
-| PaperMC JAR | SHA-256 | PaperMC API（`checksums.sha256`） | 先頭 64 文字  |
-| Pl3xMap JAR | SHA-512 | Modrinth API（`hashes.sha512`）   | 先頭 128 文字 |
+| 対象        | アルゴリズム | 期待値取得元                      | 比較文字数    |
+|-------------|--------------|-----------------------------------|---------------|
+| PaperMC JAR | SHA-256      | PaperMC API（`checksums.sha256`） | 先頭 64 文字  |
+| Pl3xMap JAR | SHA-512      | Modrinth API（`hashes.sha512`）   | 先頭 128 文字 |
 
 ---
 
@@ -172,16 +179,20 @@ PaperMC および Pl3xMap の最新版 JAR ファイルをリモートサーバ�
 
 ## 例外
 
-| 例外クラス                  | 発生条件                             |
-|------------------------|----------------------------------|
-| `JSchException`        | SSH 接続・チャンネル接続失敗                 |
-| `InterruptedException` | SSH コマンド実行中の割り込み・ポーリングスリープ中の割り込み |
-| `IOException`          | SSH 標準出力の読み取り失敗・HTTP 通信失敗        |
+| 例外クラス                   | 発生条件                                                                  |
+|------------------------------|---------------------------------------------------------------------------|
+| `JSchException`              | SSH 接続・チャンネル接続失敗                                              |
+| `InterruptedException`       | SSH コマンド実行中の割り込み・ポーリングスリープ中の割り込み              |
+| `IOException`                | SSH標準出力の読み取り失敗・HTTP通信失敗・バージョンファイルのオープン失敗 |
+| `RuntimeException`（非検査） | PaperMC正式版が全系列に見つからない場合                                   |
 
 ---
 
 ## 設計上の注意点
 
+- バージョンファイルの親ディレクトリの存在と実行ユーザの作成・上書き権限、十分なディスク容量を前提とする。親ディレクトリの自動作成や
+  `PrintStream` のエラーフラグ確認は行わない。
+- 対象サーバの初期疎通確認によるスキップや、ファイル出力到達前の例外発生時はファイルを更新しない。既存ファイルがあれば以前の内容が残る。
 - `runCommand` はコマンド実行前に必ず `waitForBecomeActive` を呼ぶため、再起動中のサーバへも自動で待機・リトライが行われる。
 - `isAlive` は `WksWorkFlow` の処理開始時疎通確認で使用し、非アクティブサーバをスキップするための判定値を返す。
 - `movePaperMc` は `runCommand` を経由せず、`SshExec` を直接操作してコマンドを実行する。SHA検証の結果によってコマンドの実行有無を制御する必要があるため、共通処理である
