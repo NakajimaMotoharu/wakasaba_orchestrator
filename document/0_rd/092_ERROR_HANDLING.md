@@ -19,32 +19,42 @@
 
 ### 検査例外（Checked Exception）
 
-| 例外クラス                  | 主な発生箇所                                | 原因                                                                           |
-|------------------------|---------------------------------------|------------------------------------------------------------------------------|
-| `IOException`          | `ConnectionInformation.getCiFromFile` | 接続情報ファイルの読み込み失敗                                                              |
-| `IOException`          | `SshExec.execute`                     | SSH標準出力の読み取り失敗                                                               |
-| `IOException`          | `BashExec.runCommand`                 | ローカルプロセスの起動・出力読み取り失敗                                                         |
-| `IOException`          | `Curl.exec`                           | HTTPリクエストのネットワーク障害                                                           |
-| `IOException`          | `Main.outLog`                         | ログファイルへの書き込み失敗・出力先ディレクトリ不在またはファイル生成失敗                                        |
-| `InterruptedException` | `SshExec.execute`                     | SSH待機中の割り込み                                                                  |
-| `InterruptedException` | `SshCommand.waitForBecomeActive`      | ポーリングスリープ中の割り込み                                                              |
-| `InterruptedException` | `BashExec.runCommand`                 | `process.waitFor()` 中の割り込み                                                   |
-| `InterruptedException` | `Curl.exec`                           | HTTPリクエスト待機中の割り込み                                                            |
-| `JSchException`        | `SshExec.isAlive`                     | SSHセッション生成エラー。`session.connect()` が投げるすべての `JSchException` を吸収して `false` を返す |
-| `JSchException`        | `SshExec.execute`                     | SSH接続・チャンネル接続失敗                                                              |
+| 例外クラス                               | 主な発生箇所                          | 原因                                                                                                    |
+|------------------------------------------|---------------------------------------|---------------------------------------------------------------------------------------------------------|
+| `FileNotFoundException`（`IOException`） | `SshCommand.wgetPaperMc`              | 管理端末上のPaperMCバージョンファイルのオープン失敗                                                     |
+| `IOException`                            | `ConnectionInformation.getCiFromFile` | 接続情報ファイルの読み込み失敗                                                                          |
+| `IOException`                            | `SshExec.execute`                     | SSH標準出力の読み取り失敗                                                                               |
+| `IOException`                            | `BashExec.runCommand`                 | ローカルプロセスの起動・出力読み取り失敗                                                                |
+| `IOException`                            | `Curl.exec`                           | HTTPリクエストのネットワーク障害                                                                        |
+| `IOException`                            | `Main.outLog`                         | ログファイルへの書き込み失敗・出力先ディレクトリ不在またはファイル生成失敗                              |
+| `InterruptedException`                   | `SshExec.execute`                     | SSH待機中の割り込み                                                                                     |
+| `InterruptedException`                   | `SshCommand.waitForBecomeActive`      | ポーリングスリープ中の割り込み                                                                          |
+| `InterruptedException`                   | `BashExec.runCommand`                 | `process.waitFor()` 中の割り込み                                                                        |
+| `InterruptedException`                   | `Curl.exec`                           | HTTPリクエスト待機中の割り込み                                                                          |
+| `JSchException`                          | `SshExec.isAlive`                     | SSHセッション生成エラー。`session.connect()` が投げるすべての `JSchException` を吸収して `false` を返す |
+| `JSchException`                          | `SshExec.execute`                     | SSH接続・チャンネル接続失敗                                                                             |
 
 ### 非検査例外（Unchecked Exception）
 
-| 例外クラス                       | 主な発生箇所                                | 原因                        |
-|-----------------------------|---------------------------------------|---------------------------|
-| `NumberFormatException`     | `ConnectionInformation.getCiFromFile` | 接続情報ファイルの2行目が整数値でない       |
-| `IndexOutOfBoundsException` | `ConnectionInformation.getCiFromFile` | 接続情報ファイルが4行未満             |
-| `JacksonException`（非検査）     | `PaperUrlGen` 全メソッド                   | JSONパース失敗（APIレスポンス形式の変更等） |
-| `NullPointerException`      | `PaperUrlGen` 全メソッド                   | JSONのキーが存在しない場合           |
+| 例外クラス                   | 主な発生箇所                          | 原因                                           |
+|------------------------------|---------------------------------------|------------------------------------------------|
+| `RuntimeException`           | `PaperUrlGen.getPaperMcVersion`       | 全系列に正式版が見つからない（空の一覧を含む） |
+| `NumberFormatException`      | `ConnectionInformation.getCiFromFile` | 接続情報ファイルの2行目が整数値でない          |
+| `IndexOutOfBoundsException`  | `ConnectionInformation.getCiFromFile` | 接続情報ファイルが4行未満                      |
+| `JacksonException`（非検査） | `PaperUrlGen` 全メソッド              | JSONパース失敗（APIレスポンス形式の変更等）    |
+| `NullPointerException`       | `PaperUrlGen` 全メソッド              | JSONのキーが存在しない場合                     |
 
 ---
 
 ## 例外伝播経路
+
+PaperMC正式版未検出時は `OTHER_PAPERMC_EXCEPTION`（`Exception: No official version was found.`）をメッセージとして
+`RuntimeException` を送出すること。
+バージョンファイルのオープン失敗は `IOException` として上位へ伝播させること。
+両者ともワークフローの後続処理を中断し、既存の `Main.main` でスタックトレースをログへ記録すること。
+
+バージョンファイルは出力到達前に例外が発生した場合には更新せず、既存内容が残る。
+出力先ディレクトリの存在と作成・上書き権限、十分なディスク容量を前提とし、`PrintStream` の書き込み・クローズ時のエラーフラグ確認は行わないこと。
 
 ```
 各ユーティリティクラス
@@ -77,11 +87,11 @@ Main.outLog の IOException
 
 以下の状況ではログファイルが出力されない（または不完全になる）。これらはすべて仕様上許容される動作である。
 
-| 状況                     | 結果                                         |
-|------------------------|--------------------------------------------|
-| `main` に渡す引数が5つでない     | 標準出力にUSAGEメッセージを表示して終了。ログファイルは生成されない       |
-| ワークフロー処理途中で例外が発生       | スタックトレースと終了時刻を追記し、途中までの実行ログとともにログファイルへ出力する |
-| ログファイルの出力先ディレクトリが存在しない | `IOException` が発生してJVMが終了                  |
+| 状況                                         | 結果                                                                                 |
+|----------------------------------------------|--------------------------------------------------------------------------------------|
+| `main` に渡す引数が5つでない                 | 標準出力にUSAGEメッセージを表示して終了。ログファイルは生成されない                  |
+| ワークフロー処理途中で例外が発生             | スタックトレースと終了時刻を追記し、途中までの実行ログとともにログファイルへ出力する |
+| ログファイルの出力先ディレクトリが存在しない | `IOException` が発生してJVMが終了                                                    |
 
 ---
 

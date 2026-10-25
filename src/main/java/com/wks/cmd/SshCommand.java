@@ -9,6 +9,7 @@ import com.wks.util.Curl;
 import com.wks.util.SshExec;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -101,6 +102,13 @@ public class SshCommand {
             // コマンド実行
             runCommand(ci, pl3xCmd);
         }
+
+        // PaperMCのバージョンファイル出力
+        PrintStream ps = new PrintStream(WksConstants.PATH_PAPERMC_VERSION);
+        // バージョン情報書き込み
+        ps.print(version);
+        // ファイルクローズ
+        ps.close();
     }
 
     /**
