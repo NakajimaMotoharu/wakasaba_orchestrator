@@ -3,9 +3,17 @@ package com.wks.parts;
 public class WksConstants {
     // ファイルパス
     /**
+     * wakasaba_orchestratorディレクトリ
+     */
+    public static final String PATH_WAKASABA_EXEC = "/home/mini/wakasaba_orchestrator/";
+    /**
      * ログ出力先パス
      */
-    public static final String PATH_EXEC_LOG = "/home/mini/wakasaba_orchestrator/log/log_%s.txt";
+    public static final String PATH_EXEC_LOG = PATH_WAKASABA_EXEC + "log/log_%s.txt";
+    /**
+     * PaperMCバージョン情報格納パス
+     */
+    public static final String PATH_PAPERMC_VERSION = PATH_WAKASABA_EXEC + "papermc_version.txt";
     /**
      * PaperMCダウンロード先パス
      */
@@ -207,6 +215,14 @@ public class WksConstants {
      */
     public static final String JSON_PL3XMAP_SHA = "sha512";
     /**
+     * メジャーバージョン初期値用空文字
+     */
+    public static final String JSON_ES = "";
+    /**
+     * メジャーバージョン判別用ハイフン
+     */
+    public static final String JSON_HYPHEN = "-";
+    /**
      * ダブルクオーテーション除去用ダブルクオーテーション
      */
     public static final String JSON_REPLACE_DQ = "\"";
@@ -252,5 +268,9 @@ public class WksConstants {
      * サーバが現在アクティブ出ないときの警告メッセージ
      */
     public static final String OTHER_NOT_ALIVE_MSG = "WARNING: Server Not Active";
+    /**
+     * PaperMCのバージョン探索で正式版が見つからなかった時の例外内容
+     */
+    public static final String OTHER_PAPERMC_EXCEPTION = "Exception: No official version was found.";
 
 }

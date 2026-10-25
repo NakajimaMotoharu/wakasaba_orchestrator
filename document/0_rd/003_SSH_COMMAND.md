@@ -2,13 +2,13 @@
 
 ## 基本情報
 
-| 項目       | 内容                                                                           |
-|----------|------------------------------------------------------------------------------|
-| 完全修飾クラス名 | `com.wks.cmd.SshCommand`                                                     |
-| ファイル名    | `SshCommand.java`                                                            |
-| 種別       | class（public）                                                                |
-| 責務       | SSH経由で実行する各種コマンドの業務ロジックラッパー。コマンドの組み立て・実行・ログ記録を集約する                           |
-| 主な依存クラス  | `Main`、`SshExec`、`ConnectionInformation`、`Curl`、`PaperUrlGen`、`WksConstants` |
+| 項目             | 内容                                                                                              |
+|------------------|---------------------------------------------------------------------------------------------------|
+| 完全修飾クラス名 | `com.wks.cmd.SshCommand`                                                                          |
+| ファイル名       | `SshCommand.java`                                                                                 |
+| 種別             | class（public）                                                                                   |
+| 責務             | SSH経由で実行する各種コマンドの業務ロジックラッパー。コマンドの組み立て・実行・ログ記録を集約する |
+| 主な依存クラス   | `Main`、`SshExec`、`ConnectionInformation`、`Curl`、`PaperUrlGen`、`WksConstants`                 |
 
 ---
 
@@ -46,7 +46,7 @@
 
 ### SC-07：PaperMC/Pl3xMap最新版のダウンロード
 
-- PaperMC公式APIを呼び出し、最新バージョン文字列を取得できること。
+- PaperMC公式APIを呼び出し、`PaperUrlGen.getPaperMcVersion` でpre・rc等を除外した最新正式版のバージョン文字列を取得できること。
 - 取得したバージョン文字列でビルド情報APIを呼び出し、最新ビルドのダウンロードURLを取得できること。
 - 取得したダウンロードURLを埋め込んだwgetコマンドをリモートサーバ上で実行し、PaperMC JARを所定のダウンロードディレクトリへ保存できること。
 - Modrinth APIを呼び出し、Pl3xMapの最新ダウンロードURLを取得できること。
@@ -57,6 +57,7 @@
 ### SC-08：JARファイルのSHA検証・本番配置
 
 - ダウンロード済みPaperMC JARのSHA-256チェックサムをリモートサーバ上で計算し、PaperMC APIから取得した期待値と比較できること。
+- SHA-256期待値を取得するバージョンも `PaperUrlGen.getPaperMcVersion` により最新正式版を選択すること。
 - SHA-256が一致する場合、本番ディレクトリの旧PaperMC JARを削除し、ダウンロードファイルを本番ディレクトリへ移動できること。
 - SHA-256が一致しない場合、PaperMC JARのファイル移動をスキップすること。
 - Pl3xMapの旧JARファイルは、バージョン一致・SHA検証の結果にかかわらず本番プラグインディレクトリから削除すること。
@@ -67,10 +68,10 @@
 
 #### SHA検証仕様
 
-| 対象          | アルゴリズム  | 期待値取得元                          | 比較文字数   |
-|-------------|---------|---------------------------------|---------|
-| PaperMC JAR | SHA-256 | PaperMC API（`checksums.sha256`） | 先頭64文字  |
-| Pl3xMap JAR | SHA-512 | Modrinth API（`hashes.sha512`）   | 先頭128文字 |
+| 対象        | アルゴリズム | 期待値取得元                      | 比較文字数  |
+|-------------|--------------|-----------------------------------|-------------|
+| PaperMC JAR | SHA-256      | PaperMC API（`checksums.sha256`） | 先頭64文字  |
+| Pl3xMap JAR | SHA-512      | Modrinth API（`hashes.sha512`）   | 先頭128文字 |
 
 ### SC-09：コマンド実行前のサーバ疎通確認（共通処理）
 
@@ -96,49 +97,62 @@
 - 判定には `SshExec.isAlive()` を使用し、コマンド実行および標準出力ログの追加は行わないこと。
 - 疎通可能な場合は `true`、疎通不可の場合は `false` を返却すること。
 
+### SC-13：PaperMCバージョンファイルの出力
+
+- `wgetPaperMc` のPaperMC・Pl3xMapダウンロード処理後、管理端末上の `PATH_PAPERMC_VERSION`（
+  `/home/mini/wakasaba_orchestrator/papermc_version.txt`）へ取得対象のバージョン文字列を出力すること。
+- `PrintStream` の `print` により、ラベル・ダブルクオーテーション・末尾改行を付けずに書き込み、`close`
+  すること。ファイルがあれば上書きすること。
+- Pl3xMapのダウンロードをバージョン不一致でスキップした場合もファイル出力すること。
+- 出力は `movePaperMc` のSHA検証・本番配置より前とし、配置・起動完了を示すファイルとしては扱わないこと。
+
 ---
 
 ## 要求インタフェース
 
 ### フィールド
 
-| フィールド名 | 型                   | 修飾子                    | 初期値        | 要件                                  |
-|--------|---------------------|------------------------|------------|-------------------------------------|
-| `log`  | `ArrayList<String>` | `private static final` | `Main.log` | `Main.log` への参照。コマンドと標準出力のログ記録に使用する |
+| フィールド名 | 型                  | 修飾子                 | 初期値     | 要件                                                        |
+|--------------|---------------------|------------------------|------------|-------------------------------------------------------------|
+| `log`        | `ArrayList<String>` | `private static final` | `Main.log` | `Main.log` への参照。コマンドと標準出力のログ記録に使用する |
 
 ### メソッド
 
-| メソッド名                 | 戻り値型      | 修飾子              | 要件概要                                             |
-|-----------------------|-----------|------------------|--------------------------------------------------|
-| `update`              | `void`    | `public static`  | `CMD_UPDATE` を引数に `runCommand` を呼び出すラッパー         |
-| `upgrade`             | `void`    | `public static`  | `CMD_UPGRADE` を引数に `runCommand` を呼び出すラッパー        |
-| `shutdown`            | `void`    | `public static`  | `CMD_SHUTDOWN` を引数に `runCommand` を呼び出すラッパー       |
-| `stopPaperMC`         | `void`    | `public static`  | `CMD_PAPERMC_END` を引数に `runCommand` を呼び出すラッパー    |
-| `waitOneMin`          | `void`    | `public static`  | `CMD_WAIT_ONE_MIN` を引数に `runCommand` を呼び出すラッパー   |
-| `startSchubert`       | `void`    | `public static`  | `CMD_SCHUBERT_START` を引数に `runCommand` を呼び出すラッパー |
-| `stopSchubert`        | `void`    | `public static`  | `CMD_SCHUBERT_END` を引数に `runCommand` を呼び出すラッパー   |
-| `startPaperMC`        | `void`    | `public static`  | `CMD_PAPERMC_START` を引数に `runCommand` を呼び出すラッパー  |
-| `backupPaperMC`       | `void`    | `public static`  | `CMD_PAPERMC_BACKUP` を引数に `runCommand` を呼び出すラッパー |
-| `wgetPaperMc`         | `void`    | `public static`  | PaperMC/Pl3xMap JARをリモートサーバへダウンロードする             |
-| `movePaperMc`         | `void`    | `public static`  | SHA検証後に本番ディレクトリへJARを移動する                         |
-| `isAlive`             | `boolean` | `public static`  | 対象サーバへSSH接続可能か判定する                               |
-| `runCommand`          | `void`    | `private static` | 疎通確認後にコマンドを実行しログを記録する共通処理                        |
-| `waitForBecomeActive` | `void`    | `private static` | SSH接続可能になるまでポーリング待機する                            |
+| メソッド名            | 戻り値型  | 修飾子           | 要件概要                                                                                    |
+|-----------------------|-----------|------------------|---------------------------------------------------------------------------------------------|
+| `update`              | `void`    | `public static`  | `CMD_UPDATE` を引数に `runCommand` を呼び出すラッパー                                       |
+| `upgrade`             | `void`    | `public static`  | `CMD_UPGRADE` を引数に `runCommand` を呼び出すラッパー                                      |
+| `shutdown`            | `void`    | `public static`  | `CMD_SHUTDOWN` を引数に `runCommand` を呼び出すラッパー                                     |
+| `stopPaperMC`         | `void`    | `public static`  | `CMD_PAPERMC_END` を引数に `runCommand` を呼び出すラッパー                                  |
+| `waitOneMin`          | `void`    | `public static`  | `CMD_WAIT_ONE_MIN` を引数に `runCommand` を呼び出すラッパー                                 |
+| `startSchubert`       | `void`    | `public static`  | `CMD_SCHUBERT_START` を引数に `runCommand` を呼び出すラッパー                               |
+| `stopSchubert`        | `void`    | `public static`  | `CMD_SCHUBERT_END` を引数に `runCommand` を呼び出すラッパー                                 |
+| `startPaperMC`        | `void`    | `public static`  | `CMD_PAPERMC_START` を引数に `runCommand` を呼び出すラッパー                                |
+| `backupPaperMC`       | `void`    | `public static`  | `CMD_PAPERMC_BACKUP` を引数に `runCommand` を呼び出すラッパー                               |
+| `wgetPaperMc`         | `void`    | `public static`  | PaperMC/Pl3xMap JARをリモートサーバへダウンロードし、管理端末へバージョンファイルを出力する |
+| `movePaperMc`         | `void`    | `public static`  | SHA検証後に本番ディレクトリへJARを移動する                                                  |
+| `isAlive`             | `boolean` | `public static`  | 対象サーバへSSH接続可能か判定する                                                           |
+| `runCommand`          | `void`    | `private static` | 疎通確認後にコマンドを実行しログを記録する共通処理                                          |
+| `waitForBecomeActive` | `void`    | `private static` | SSH接続可能になるまでポーリング待機する                                                     |
 
 ---
 
 ## 例外要件
 
-| 例外クラス                  | 想定発生状況                          |
-|------------------------|---------------------------------|
-| `JSchException`        | SSH接続・チャンネル接続失敗                 |
-| `InterruptedException` | SSHコマンド実行中の割り込み・ポーリングスリープ中の割り込み |
-| `IOException`          | SSH標準出力の読み取り失敗・HTTP通信失敗         |
+| 例外クラス                   | 想定発生状況                                                              |
+|------------------------------|---------------------------------------------------------------------------|
+| `JSchException`              | SSH接続・チャンネル接続失敗                                               |
+| `InterruptedException`       | SSHコマンド実行中の割り込み・ポーリングスリープ中の割り込み               |
+| `IOException`                | SSH標準出力の読み取り失敗・HTTP通信失敗・バージョンファイルのオープン失敗 |
+| `RuntimeException`（非検査） | PaperMC正式版が全系列に見つからない場合                                   |
 
 ---
 
 ## 制約・注意事項
 
+- バージョンファイルの親ディレクトリは存在し、実行ユーザに作成・上書き権限があること。十分なディスク容量を前提とし、
+  `PrintStream` の書き込み・クローズ時のエラーフラグ確認は行わないこと。
+- 初期疎通確認で対象サーバをスキップした場合や、ファイル出力到達前に例外が発生した場合はバージョンファイルを更新しないこと。
 - `runCommand` はコマンド実行前に必ず `waitForBecomeActive` を呼ぶため、再起動中のサーバへも自動で待機・リトライが行われること。
 - `isAlive` は `WksWorkFlow` の処理開始時疎通確認で使用し、非アクティブサーバをスキップするための判定値を返すこと。
 - `movePaperMc` は `runCommand` を経由せず、`SshExec` を直接操作してコマンドを実行すること。SHA検証の結果によってコマンドの実行有無を制御する必要があるため、共通処理である

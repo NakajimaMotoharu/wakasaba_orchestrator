@@ -20,11 +20,32 @@ public class PaperUrlGen {
         JsonNode src = om.readTree(json);
         // メジャーバージョンのjsonノード抽出
         JsonNode majorVersion = src.get(WksConstants.JSON_PAPERMC_GV);
-        // メジャーバージョンの中身がコレクションのため、一度リストに変換してから先頭を取得
-        JsonNode fullVersion = majorVersion.get(List.copyOf(majorVersion.propertyNames()).getFirst());
-        // バージョン情報からダブルクオーテーションを除去して返却
-        return fullVersion.get(0).toString().replace(WksConstants.JSON_REPLACE_DQ, WksConstants.JSON_REPLACE_ES);
+        // 出力用文字列を空文字で初期化
+        String version = WksConstants.JSON_ES;
+        // 出力可能フラグ
+        boolean majorVersionFlag = false;
+        // メジャーバージョンのリストを取得
+        List<String> majorVersionNames = List.copyOf(majorVersion.propertyNames());
+        // メジャーバージョンごとにループ
+        for (int i = 0; i < majorVersionNames.size() && !majorVersionFlag; i++){
+            // メジャーバージョンの文字列を取得
+            String majorVersionString = majorVersionNames.get(i);
+            // メジャーバージョンのJsonNodeを取得
+            JsonNode majorVersionJNode = majorVersion.get(majorVersionString);
+            // 各マイナーバージョンごとにループ
+            for (int j = 0; j < majorVersionJNode.size() && !majorVersionFlag; j++){
+                // マイナーバージョンを取得
+                version = majorVersionJNode.get(j).toString();
+                // マイナーバージョンが正式版であれば出力フラグを真に設定
+                if (!version.contains(WksConstants.JSON_HYPHEN)) majorVersionFlag = true;
+            }
+        }
 
+        // 正式版が見つからなかったときは例外を出力
+        if (!majorVersionFlag) throw new RuntimeException(WksConstants.OTHER_PAPERMC_EXCEPTION);
+
+        // バージョン情報からダブルクオーテーションを除去して返却
+        return  version.replace(WksConstants.JSON_REPLACE_DQ, WksConstants.JSON_REPLACE_ES);
     }
 
     /**
