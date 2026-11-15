@@ -2,24 +2,24 @@
 
 ## 基本情報
 
-| 項目       | 内容                                                                                                                                                     |
-|----------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 完全修飾クラス名 | `com.wks.util.SshExec`                                                                                                                                 |
-| ファイル名    | `SshExec.java`                                                                                                                                         |
-| 種別       | class（public）                                                                                                                                          |
-| 責務       | JSch ライブラリを使用して SSH セッションを確立し、1コマンドを実行して標準出力を返す。接続確認（疎通チェック）機能も提供する                                                                                    |
-| 主な依存クラス  | `ConnectionInformation`、`WksConstants`                                                                                                                 |
-| 依存ライブラリ  | `com.jcraft.jsch.JSch`、`com.jcraft.jsch.Session`、`com.jcraft.jsch.ChannelExec`（build.gradle: `com.github.mwiede:jsch`、JCraft 版 JSch のフォーク版が同パッケージ名で提供） |
+| 項目             | 内容                                                                                                                                                                          |
+|------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 完全修飾クラス名 | `com.wks.util.SshExec`                                                                                                                                                        |
+| ファイル名       | `SshExec.java`                                                                                                                                                                |
+| 種別             | class（public）                                                                                                                                                               |
+| 責務             | JSch ライブラリを使用して SSH セッションを確立し、1コマンドを実行して標準出力を返す。接続確認（疎通チェック）機能も提供する                                                   |
+| 主な依存クラス   | `ConnectionInformation`、`WksConstants`                                                                                                                                       |
+| 依存ライブラリ   | `com.jcraft.jsch.JSch`、`com.jcraft.jsch.Session`、`com.jcraft.jsch.ChannelExec`（build.gradle: `com.github.mwiede:jsch`、JCraft 版 JSch のフォーク版が同パッケージ名で提供） |
 
 ---
 
 ## フィールド一覧
 
-| フィールド名     | 型                       | 修飾子             | 説明                                |
-|------------|-------------------------|-----------------|-----------------------------------|
-| `ci`       | `ConnectionInformation` | `private final` | SSH 接続に使用するサーバ接続情報                |
-| `cmd`      | `String`                | `private final` | 実行対象コマンド文字列                       |
-| `executed` | `boolean`               | `private`       | コマンドの実行済みフラグ（2重実行防止用）。初期値 `false` |
+| フィールド名 | 型                      | 修飾子          | 説明                                                      |
+|--------------|-------------------------|-----------------|-----------------------------------------------------------|
+| `ci`         | `ConnectionInformation` | `private final` | SSH 接続に使用するサーバ接続情報                          |
+| `cmd`        | `String`                | `private final` | 実行対象コマンド文字列                                    |
+| `executed`   | `boolean`               | `private`       | コマンドの実行済みフラグ（2重実行防止用）。初期値 `false` |
 
 ---
 
@@ -37,10 +37,10 @@
 
 ## メソッド一覧
 
-| メソッド名                | 戻り値型       | 修飾子       | 説明                           |
-|----------------------|------------|-----------|------------------------------|
-| `isAlive`            | `boolean`  | `public`  | 対象サーバへの SSH 接続可否を確認して返す      |
-| `execute`            | `String[]` | `public`  | コマンドを実行し、標準出力を行配列で返す         |
+| メソッド名           | 戻り値型   | 修飾子    | 説明                                                |
+|----------------------|------------|-----------|-----------------------------------------------------|
+| `isAlive`            | `boolean`  | `public`  | 対象サーバへの SSH 接続可否を確認して返す           |
+| `execute`            | `String[]` | `public`  | コマンドを実行し、標準出力を行配列で返す            |
 | `getSessionInstance` | `Session`  | `private` | JSch セッションインスタンスを生成して返す（未接続） |
 
 ---
@@ -49,11 +49,14 @@
 
 ### `isAlive()`
 
+疎通確認の接続タイムアウトは `session.connect(60000)`（60000ミリ秒＝60秒）に固定する。
+初期疎通確認と復帰待ちに共用し、通常のコマンド実行用 `execute()` の接続方式は変更しない。
+
 `SshCommand.waitForBecomeActive()` から呼ばれ、サーバ応答確認のポーリングに使用される。
 
 ```
 1. getSessionInstance() → session
-2. session.connect() を試みる
+2. session.connect(60000) を試みる
    成功 → session.disconnect()、true を返す
    JSchException 発生 → false を返す（すべて吸収）
 ```
@@ -103,12 +106,12 @@ SSH セッションを確立し、コマンドを `ChannelExec` モードで実�
 
 ## 例外
 
-| メソッド名     | 例外クラス                  | 発生条件                                                                                |
-|-----------|------------------------|-------------------------------------------------------------------------------------|
-| `isAlive` | `JSchException`        | セッション生成失敗（秘密鍵読込エラー等）。`session.connect()` が投げるすべての `JSchException` を吸収して `false` を返す |
-| `execute` | `JSchException`        | SSH 接続・チャンネル接続失敗                                                                    |
-| `execute` | `IOException`          | 標準出力の読み取り失敗                                                                         |
-| `execute` | `InterruptedException` | `Thread.sleep` 中の割り込み                                                               |
+| メソッド名 | 例外クラス             | 発生条件                                                                                                                      |
+|------------|------------------------|-------------------------------------------------------------------------------------------------------------------------------|
+| `isAlive`  | `JSchException`        | セッション生成失敗（秘密鍵読込エラー等）。`session.connect(60000)` が投げるすべての `JSchException` を吸収して `false` を返す |
+| `execute`  | `JSchException`        | SSH 接続・チャンネル接続失敗                                                                                                  |
+| `execute`  | `IOException`          | 標準出力の読み取り失敗                                                                                                        |
+| `execute`  | `InterruptedException` | `Thread.sleep` 中の割り込み                                                                                                   |
 
 ---
 
@@ -116,7 +119,7 @@ SSH セッションを確立し、コマンドを `ChannelExec` モードで実�
 
 - `executed` フラグにより、同一インスタンスで `execute()` を2回呼ぶことはできない。再実行が必要な場合は新しいインスタンスを生成する。
 - `StrictHostKeyChecking=no` により known_hosts 検証を行わないため、再起動後のサーバへの接続が失敗しない。
-- `isAlive()` における `session.connect()` が投げるすべての `JSchException` は吸収して `false` を返す。
+- `isAlive()` における `session.connect(60000)` が投げるすべての `JSchException` は吸収して `false` を返す。
   `getSessionInstance()` 内での
   `JSchException`（秘密鍵読込失敗等）は呼出し元に伝播する。
 - 読み取りループは `channelExec.isClosed()` でコマンド完了を検知する。

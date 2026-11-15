@@ -39,10 +39,25 @@
 | 例外クラス                   | 主な発生箇所                          | 原因                                           |
 |------------------------------|---------------------------------------|------------------------------------------------|
 | `RuntimeException`           | `PaperUrlGen.getPaperMcVersion`       | 全系列に正式版が見つからない（空の一覧を含む） |
+| `RuntimeException`           | `SshCommand.mount` / `umount`         | マウント有無が期待状態と不一致                 |
+| `RuntimeException`           | `SshCommand.waitForBecomeActive`      | 失敗したSSH接続試行後、指定秒数の経過を検出    |
+| `NumberFormatException`      | `BashExec.getNowTime`                 | UNIX時刻の先頭行をlongに変換できない           |
 | `NumberFormatException`      | `ConnectionInformation.getCiFromFile` | 接続情報ファイルの2行目が整数値でない          |
 | `IndexOutOfBoundsException`  | `ConnectionInformation.getCiFromFile` | 接続情報ファイルが4行未満                      |
 | `JacksonException`（非検査） | `PaperUrlGen` 全メソッド              | JSONパース失敗（APIレスポンス形式の変更等）    |
 | `NullPointerException`       | `PaperUrlGen` 全メソッド              | JSONのキーが存在しない場合                     |
+
+---
+
+## 異常時運用（No.309）
+
+- 初期疎通不可は例外とせず、最初の失敗対象のログと `WARNING: Servers Not Active` を残して保守せず復帰する。
+- アンマウント後に `findmnt` 出力が残る場合、マウント後に出力がない場合は `OTHER_MOUNT_STATUS_EXCEPTION` で中止する。
+- 再起動後は各サーバ600秒目安でSSH復帰を待ち、失敗した接続試行後に期限超過なら `OTHER_REBOOT_EXCEPTION`
+  に対象接続情報を埋めて中止する。最後の試行で成功した場合は続行する。
+- 時刻取得・待機で発生した `IOException`・`InterruptedException` もMainへ伝播する。
+- 例外発生時は後続工程を実行しない。PaperMC固有の例外でもSchubertを起動しない。自動復旧・ロールバックは行わず、ログを確認して手動復旧する。
+- `SshExec.execute()` の終了コード取得は追加しない。
 
 ---
 
@@ -76,7 +91,7 @@ Main.outLog の IOException
 ## 特例：`SshExec.isAlive()` の例外吸収
 
 `SshCommand.waitForBecomeActive()` → `SshExec.isAlive()` の流れにおいて、  
-`session.connect()` が投げる `JSchException`（接続不可）は `isAlive()` 内で `false` として吸収する。
+`session.connect(60000)` が投げる `JSchException`（接続不可）は `isAlive()` 内で `false` として吸収する。
 
 これにより `shutdown` 後の再起動待ちがポーリングで実現される。  
 ただし、秘密鍵ファイル読み込みエラー等のセッション生成に起因する `JSchException` は吸収せず上位に伝播させる。
@@ -91,7 +106,7 @@ Main.outLog の IOException
 
 | 状況                                         | 結果                                                                                 |
 |----------------------------------------------|--------------------------------------------------------------------------------------|
-| `main` に渡す引数が5つでない                 | 標準出力にUSAGEメッセージを表示して終了。ログファイルは生成されない                  |
+| `main` に渡す引数が6つでない                 | 標準出力にUSAGEメッセージを表示して終了。ログファイルは生成されない                  |
 | ワークフロー処理途中で例外が発生             | スタックトレースと終了時刻を追記し、途中までの実行ログとともにログファイルへ出力する |
 | ログファイルの出力先ディレクトリが存在しない | `IOException` が発生してJVMが終了                                                    |
 
@@ -101,6 +116,5 @@ Main.outLog の IOException
 
 本設計では以下は対象外とするが、将来の改善候補として記録する。
 
-- 各処理ステップを `try-catch` で囲み、一部サーバの失敗時に残りのサーバ処理を継続する設計にすることで可用性が向上する。
 - `PaperUrlGen` の `JacksonException` / `NullPointerException` に対する明示的なハンドリングを追加することで、APIレスポンス変更時のデバッグが容易になる。
 - `Curl.exec` におけるHTTPステータスコードの検証を追加することで、APIエラー時の原因特定が容易になる。

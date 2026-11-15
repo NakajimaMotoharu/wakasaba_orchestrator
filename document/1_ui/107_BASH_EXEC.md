@@ -2,32 +2,34 @@
 
 ## 基本情報
 
-| 項目       | 内容                                                                       |
-|----------|--------------------------------------------------------------------------|
-| 完全修飾クラス名 | `com.wks.util.BashExec`                                                  |
-| ファイル名    | `BashExec.java`                                                          |
-| 種別       | class（public）                                                            |
-| 責務       | Java の `ProcessBuilder` を使用してローカルサーバ（自サーバ）上で Bash コマンドを実行する。標準出力をログに記録する |
-| 主な依存クラス  | `Main`、`WksConstants`                                                    |
+| 項目             | 内容                                                                                                                |
+|------------------|---------------------------------------------------------------------------------------------------------------------|
+| 完全修飾クラス名 | `com.wks.util.BashExec`                                                                                             |
+| ファイル名       | `BashExec.java`                                                                                                     |
+| 種別             | class（public）                                                                                                     |
+| 責務             | Java の `ProcessBuilder` を使用してローカルサーバ（自サーバ）上で Bash コマンドを実行する。標準出力をログに記録する |
+| 主な依存クラス   | `Main`、`WksConstants`                                                                                              |
 
 ---
 
 ## フィールド一覧
 
-| フィールド名 | 型                   | 修飾子                    | 説明                                         |
-|--------|---------------------|------------------------|--------------------------------------------|
-| `log`  | `ArrayList<String>` | `private static final` | `Main.log` への参照。実行コマンドと標準出力をログに追記するために使用する |
+| フィールド名 | 型                  | 修飾子                 | 説明                                                                      |
+|--------------|---------------------|------------------------|---------------------------------------------------------------------------|
+| `log`        | `ArrayList<String>` | `private static final` | `Main.log` への参照。実行コマンドと標準出力をログに追記するために使用する |
 
 ---
 
 ## メソッド一覧
 
-| メソッド名        | 戻り値型   | 修飾子              | 説明                               |
-|--------------|--------|------------------|----------------------------------|
-| `update`     | `void` | `public static`  | `sudo apt update` をローカルで実行する     |
-| `upgrade`    | `void` | `public static`  | `sudo apt upgrade -y` をローカルで実行する |
-| `shutdown`   | `void` | `public static`  | 60 秒後に再起動するコマンドをバックグラウンドで起動する    |
-| `runCommand` | `void` | `private static` | コマンド実行・出力読み取り・ログ記録の共通処理          |
+| メソッド名   | 戻り値型   | 修飾子           | 説明                                                    |
+|--------------|------------|------------------|---------------------------------------------------------|
+| `update`     | `void`     | `public static`  | `sudo apt update` をローカルで実行する                  |
+| `upgrade`    | `void`     | `public static`  | `sudo apt upgrade -y` をローカルで実行する              |
+| `shutdown`   | `void`     | `public static`  | 60 秒後に再起動するコマンドをバックグラウンドで起動する |
+| `waitOneMin` | `void`     | `public static`  | 管理端末でsleep 60の完了を待つ                          |
+| `getNowTime` | `long`     | `public static`  | dateの先頭行をUNIX秒として返す                          |
+| `runCommand` | `String[]` | `private static` | コマンド実行・出力読み取り・ログ記録の共通処理          |
 
 ---
 
@@ -53,6 +55,21 @@
 
 ---
 
+### `waitOneMin()`
+
+`public static void waitOneMin() throws IOException, InterruptedException`。
+`runCommand(CMD_WAIT_ONE_MIN)` を呼び、管理端末の `sleep 60` を同期待機する。
+両サービス停止後に1回、全台への再起動指示後に1回利用する。接続先でのsleepは行わない。
+
+### `getNowTime()`
+
+`public static long getNowTime() throws IOException, InterruptedException`。
+`runCommand(CMD_GET_TIME)` の先頭行を `Long.parseLong` で変換して返す。
+コマンドは `date '+%s'` で、単位は秒。復帰待ちの開始時刻と現在時刻に使用する。
+先頭行の存在と整数形式を前提とし、不正値なら非検査例外がMainへ伝播する。
+
+---
+
 ### `runCommand(String cmd)` ※private
 
 ```
@@ -66,32 +83,34 @@
      line = bufferedReader.readLine()
      if (line == null): break
      log.add(line)
+     retList.add(line)
 8. bufferedReader.close()
 9. inputStreamReader.close()
+10. 読み取った全行をString[]に格納して返却
 ```
 
 ---
 
 ## `SshCommand.shutdown()` との比較
 
-| 項目     | `SshCommand.shutdown()`   | `BashExec.shutdown()`                  |
-|--------|---------------------------|----------------------------------------|
-| コマンド   | `sudo shutdown -r now`    | `(sleep 60 && sudo shutdown -r now) &` |
-| 実行方式   | SSH / 即時実行                | Bash / バックグラウンド・60 秒遅延                 |
-| プロセス待機 | `SshExec.execute()` で完了待ち | `start()` のみ（待機なし）                     |
-| 目的     | リモートサーバの即時再起動             | 自サーバをバッチ終了後に再起動                        |
+| 項目         | `SshCommand.shutdown()`        | `BashExec.shutdown()`                  |
+|--------------|--------------------------------|----------------------------------------|
+| コマンド     | `sudo shutdown -r now`         | `(sleep 60 && sudo shutdown -r now) &` |
+| 実行方式     | SSH / 即時実行                 | Bash / バックグラウンド・60 秒遅延     |
+| プロセス待機 | `SshExec.execute()` で完了待ち | `start()` のみ（待機なし）             |
+| 目的         | リモートサーバの即時再起動     | 自サーバをバッチ終了後に再起動         |
 
 ---
 
 ## 例外
 
-| メソッド名      | 例外クラス                  | 発生条件                       |
-|------------|------------------------|----------------------------|
-| `update`   | `IOException`          | プロセス起動失敗・標準出力読み取り失敗        |
-| `update`   | `InterruptedException` | `process.waitFor()` 中の割り込み |
-| `upgrade`  | `IOException`          | プロセス起動失敗・標準出力読み取り失敗        |
-| `upgrade`  | `InterruptedException` | `process.waitFor()` 中の割り込み |
-| `shutdown` | `IOException`          | プロセス起動失敗                   |
+| メソッド名 | 例外クラス             | 発生条件                               |
+|------------|------------------------|----------------------------------------|
+| `update`   | `IOException`          | プロセス起動失敗・標準出力読み取り失敗 |
+| `update`   | `InterruptedException` | `process.waitFor()` 中の割り込み       |
+| `upgrade`  | `IOException`          | プロセス起動失敗・標準出力読み取り失敗 |
+| `upgrade`  | `InterruptedException` | `process.waitFor()` 中の割り込み       |
+| `shutdown` | `IOException`          | プロセス起動失敗                       |
 
 ---
 
@@ -100,3 +119,7 @@
 - `runCommand` では `process.waitFor()` の後に `getInputStream()` で出力を読み取るため、出力バッファがオーバーフローするほど大量の出力がある場合にデッドロックのリスクがある。
 - `SshExec` と異なり実行済みフラグを持たないため、同じコマンドを複数回呼ぶことが可能。
 - `shutdown()` は `InterruptedException` を宣言しないが、`update()` / `upgrade()` は宣言している点に注意。
+
+- `runCommand` の戻り値は標準出力の行配列（空出力は長さ0）。実行コマンドと各行は従来どおりログにも記録する。
+- `waitOneMin`・`getNowTime` のプロセス起動・読み取り失敗は `IOException`、完了待ち割り込みは `InterruptedException`
+  として上位へ伝播する。

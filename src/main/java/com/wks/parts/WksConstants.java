@@ -1,6 +1,32 @@
 package com.wks.parts;
 
 public class WksConstants {
+    // サーバ定数
+    /**
+     * テストサーバのサーバ定数
+     */
+    public static final int SERVER_TEST = 0;
+    /**
+     * PaperMCサーバのサーバ定数
+     */
+    public static final int SERVER_PAPER = 1;
+    /**
+     * ローカルLLMサーバのサーバ定数
+     */
+    public static final int SERVER_LLM = 2;
+    /**
+     * Schubertサーバのサーバ定数
+     */
+    public static final int SERVER_SCHUBERT = 3;
+    /**
+     * VPNサーバのサーバ定数
+     */
+    public static final int SERVER_VPN = 4;
+    /**
+     * NASサーバのサーバ定数
+     */
+    public static final int SERVER_NAS = 5;
+
     // ファイルパス
     /**
      * wakasaba_orchestratorディレクトリ
@@ -132,6 +158,34 @@ public class WksConstants {
      * シェル実行オプション
      */
     public static final String CMD_SHELL_OPTION = "-c";
+    /**
+     * NASマウントコマンド
+     */
+    public static final String CMD_MOUNT_NAS = "sudo mount /nas";
+    /**
+     * NASアンマウントコマンド
+     */
+    public static final String CMD_UMOUNT_NAS = "sudo umount /nas";
+    /**
+     * NASマウント状態取得コマンド
+     */
+    public static final String CMD_MOUNT_STATUS_NAS = "findmnt /nas";
+    /**
+     * SHAREマウントコマンド
+     */
+    public static final String CMD_MOUNT_SHARE = "sudo mount /share";
+    /**
+     * SHAREアンマウントコマンド
+     */
+    public static final String CMD_UMOUNT_SHARE = "sudo umount /share";
+    /**
+     * SHAREマウント状態取得コマンド
+     */
+    public static final String CMD_MOUNT_STATUS_SHARE = "findmnt /share";
+    /**
+     * 時刻取得コマンド
+     */
+    public static final String CMD_GET_TIME = "date '+%s'";
 
     // ログメッセージ
     /**
@@ -235,7 +289,7 @@ public class WksConstants {
     /**
      * 引数異常時に表示するUSAGE
      */
-    public static final String OTHER_ARGS_MSG = "The length of the arguments must be 5.";
+    public static final String OTHER_ARGS_MSG = "The length of the arguments must be 6.";
     /**
      * タイムゾーン
      */
@@ -265,12 +319,27 @@ public class WksConstants {
      */
     public static final String OTHER_SSH_CONFIG_VAL = "no";
     /**
-     * サーバが現在アクティブ出ないときの警告メッセージ
+     * 全サーバが現在アクティブでないときの警告メッセージ
      */
-    public static final String OTHER_NOT_ALIVE_MSG = "WARNING: Server Not Active";
+    public static final String OTHER_NOT_ALIVE_MSG = "WARNING: Servers Not Active";
     /**
      * PaperMCのバージョン探索で正式版が見つからなかった時の例外内容
      */
     public static final String OTHER_PAPERMC_EXCEPTION = "Exception: No official version was found.";
-
+    /**
+     * NASマウント状態が正常でない場合の例外内容
+     */
+    public static final String OTHER_MOUNT_STATUS_EXCEPTION = "The mount status is not normal.";
+    /**
+     * 疎通確認時のメッセージ
+     */
+    public static final String OTHER_CONNECTION_CHECK = "Checking Connection: %s";
+    /**
+     * 再起動待機時間上限
+     */
+    public static final int SERVER_REBOOT_WAIT_LIMIT = 600;
+    /**
+     * サーバの起動状態に復帰しない場合の例外内容
+     */
+    public static final String OTHER_REBOOT_EXCEPTION = "The server did not restart successfully: %s";
 }

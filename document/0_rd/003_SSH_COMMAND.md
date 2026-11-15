@@ -8,7 +8,7 @@
 | ファイル名       | `SshCommand.java`                                                                                 |
 | 種別             | class（public）                                                                                   |
 | 責務             | SSH経由で実行する各種コマンドの業務ロジックラッパー。コマンドの組み立て・実行・ログ記録を集約する |
-| 主な依存クラス   | `Main`、`SshExec`、`ConnectionInformation`、`Curl`、`PaperUrlGen`、`WksConstants`                 |
+| 主な依存クラス   | `Main`、`SshExec`、`ConnectionInformation`、`Curl`、`PaperUrlGen`、`WksConstants`、`BashExec`     |
 
 ---
 
@@ -79,11 +79,9 @@
 - 待機はポーリング（1秒間隔での接続試行）によって実現すること。
 - これにより、サーバ再起動後の後続コマンドも自動的に正常実行できること。
 
-### SC-10：固定60秒待機コマンドの実行
+### SC-10：固定待機の移管
 
-- `sleep 60` を対象サーバ上で実行できること。
-- 実行コマンドをグローバルログへ記録すること。
-- PaperMC停止後の安全停止待機として `WksWorkFlow` から利用できること。
+- SSH経由の固定待機は削除し、管理端末の `BashExec.waitOneMin()` へ移管すること。
 
 ### SC-11：Schubertシステムの停止・起動
 
@@ -108,6 +106,21 @@
 
 ---
 
+### SC-14：共有の解除・復旧と状態確認
+
+- NAS以外のリモートサーバに対して `/nas`・`/share` の解除・再接続を行うこと。
+- アンマウント後にfindmnt出力が残る場合、マウント後に出力がない場合は実行時例外で中止すること。
+- 共通実行処理は標準出力を `String[]` として返せること。
+
+### SC-15：上限指定のSSH復帰待ち
+
+- 上限秒数を指定した公開待機メソッドを提供すること。管理端末のUNIX時刻で経過時間を計測すること。
+- 疎通確認の接続タイムアウトは60秒、失敗後の待機は1秒とすること。
+- 失敗後に期限超過を検出した場合は接続情報付き実行時例外とし、期限後でも最後の試行で接続できれば続行すること。
+- 1引数版の既定上限は `Integer.MAX_VALUE` 秒とすること。
+
+---
+
 ## 要求インタフェース
 
 ### フィールド
@@ -118,33 +131,35 @@
 
 ### メソッド
 
-| メソッド名            | 戻り値型  | 修飾子           | 要件概要                                                                                    |
-|-----------------------|-----------|------------------|---------------------------------------------------------------------------------------------|
-| `update`              | `void`    | `public static`  | `CMD_UPDATE` を引数に `runCommand` を呼び出すラッパー                                       |
-| `upgrade`             | `void`    | `public static`  | `CMD_UPGRADE` を引数に `runCommand` を呼び出すラッパー                                      |
-| `shutdown`            | `void`    | `public static`  | `CMD_SHUTDOWN` を引数に `runCommand` を呼び出すラッパー                                     |
-| `stopPaperMC`         | `void`    | `public static`  | `CMD_PAPERMC_END` を引数に `runCommand` を呼び出すラッパー                                  |
-| `waitOneMin`          | `void`    | `public static`  | `CMD_WAIT_ONE_MIN` を引数に `runCommand` を呼び出すラッパー                                 |
-| `startSchubert`       | `void`    | `public static`  | `CMD_SCHUBERT_START` を引数に `runCommand` を呼び出すラッパー                               |
-| `stopSchubert`        | `void`    | `public static`  | `CMD_SCHUBERT_END` を引数に `runCommand` を呼び出すラッパー                                 |
-| `startPaperMC`        | `void`    | `public static`  | `CMD_PAPERMC_START` を引数に `runCommand` を呼び出すラッパー                                |
-| `backupPaperMC`       | `void`    | `public static`  | `CMD_PAPERMC_BACKUP` を引数に `runCommand` を呼び出すラッパー                               |
-| `wgetPaperMc`         | `void`    | `public static`  | PaperMC/Pl3xMap JARをリモートサーバへダウンロードし、管理端末へバージョンファイルを出力する |
-| `movePaperMc`         | `void`    | `public static`  | SHA検証後に本番ディレクトリへJARを移動する                                                  |
-| `isAlive`             | `boolean` | `public static`  | 対象サーバへSSH接続可能か判定する                                                           |
-| `runCommand`          | `void`    | `private static` | 疎通確認後にコマンドを実行しログを記録する共通処理                                          |
-| `waitForBecomeActive` | `void`    | `private static` | SSH接続可能になるまでポーリング待機する                                                     |
+| メソッド名                       | 戻り値型   | 修飾子           | 要件概要                                                                                    |
+|----------------------------------|------------|------------------|---------------------------------------------------------------------------------------------|
+| `update`                         | `void`     | `public static`  | `CMD_UPDATE` を引数に `runCommand` を呼び出すラッパー                                       |
+| `upgrade`                        | `void`     | `public static`  | `CMD_UPGRADE` を引数に `runCommand` を呼び出すラッパー                                      |
+| `shutdown`                       | `void`     | `public static`  | `CMD_SHUTDOWN` を引数に `runCommand` を呼び出すラッパー                                     |
+| `stopPaperMC`                    | `void`     | `public static`  | `CMD_PAPERMC_END` を引数に `runCommand` を呼び出すラッパー                                  |
+| `startSchubert`                  | `void`     | `public static`  | `CMD_SCHUBERT_START` を引数に `runCommand` を呼び出すラッパー                               |
+| `stopSchubert`                   | `void`     | `public static`  | `CMD_SCHUBERT_END` を引数に `runCommand` を呼び出すラッパー                                 |
+| `startPaperMC`                   | `void`     | `public static`  | `CMD_PAPERMC_START` を引数に `runCommand` を呼び出すラッパー                                |
+| `backupPaperMC`                  | `void`     | `public static`  | `CMD_PAPERMC_BACKUP` を引数に `runCommand` を呼び出すラッパー                               |
+| `wgetPaperMc`                    | `void`     | `public static`  | PaperMC/Pl3xMap JARをリモートサーバへダウンロードし、管理端末へバージョンファイルを出力する |
+| `movePaperMc`                    | `void`     | `public static`  | SHA検証後に本番ディレクトリへJARを移動する                                                  |
+| `isAlive`                        | `boolean`  | `public static`  | 対象サーバへSSH接続可能か判定する                                                           |
+| `mount`                          | `void`     | `public static`  | /nas・/share接続と状態確認                                                                  |
+| `umount`                         | `void`     | `public static`  | /nas・/share解除と状態確認                                                                  |
+| `runCommand`                     | `String[]` | `private static` | 疎通確認後にコマンドを実行しログを記録する共通処理                                          |
+| `waitForBecomeActive`            | `void`     | `public static`  | SSH接続可能になるまでポーリング待機する                                                     |
+| `waitForBecomeActive(ci, limit)` | `void`     | `public static`  | 上限秒数指定の復帰待ち                                                                      |
 
 ---
 
 ## 例外要件
 
-| 例外クラス                   | 想定発生状況                                                              |
-|------------------------------|---------------------------------------------------------------------------|
-| `JSchException`              | SSH接続・チャンネル接続失敗                                               |
-| `InterruptedException`       | SSHコマンド実行中の割り込み・ポーリングスリープ中の割り込み               |
-| `IOException`                | SSH標準出力の読み取り失敗・HTTP通信失敗・バージョンファイルのオープン失敗 |
-| `RuntimeException`（非検査） | PaperMC正式版が全系列に見つからない場合                                   |
+| 例外クラス                   | 想定発生状況                                                                                      |
+|------------------------------|---------------------------------------------------------------------------------------------------|
+| `JSchException`              | SSH接続・チャンネル接続失敗                                                                       |
+| `InterruptedException`       | SSHコマンド実行中の割り込み・ポーリングスリープ中の割り込み                                       |
+| `IOException`                | SSH標準出力の読み取り失敗・HTTP通信失敗・バージョンファイルのオープン失敗・管理端末の時刻取得失敗 |
+| `RuntimeException`（非検査） | PaperMC正式版が全系列に見つからない場合・マウント状態不一致・復帰待ち超過                         |
 
 ---
 
@@ -152,9 +167,9 @@
 
 - バージョンファイルの親ディレクトリは存在し、実行ユーザに作成・上書き権限があること。十分なディスク容量を前提とし、
   `PrintStream` の書き込み・クローズ時のエラーフラグ確認は行わないこと。
-- 初期疎通確認で対象サーバをスキップした場合や、ファイル出力到達前に例外が発生した場合はバージョンファイルを更新しないこと。
+- 初期疎通不可で全体の保守を開始しなかった場合や、ファイル出力到達前に例外が発生した場合はバージョンファイルを更新しないこと。
 - `runCommand` はコマンド実行前に必ず `waitForBecomeActive` を呼ぶため、再起動中のサーバへも自動で待機・リトライが行われること。
-- `isAlive` は `WksWorkFlow` の処理開始時疎通確認で使用し、非アクティブサーバをスキップするための判定値を返すこと。
+- `isAlive` は `WksWorkFlow` の処理開始時疎通確認で使用し、全体の保守開始可否を判断するための判定値を返すこと。
 - `movePaperMc` は `runCommand` を経由せず、`SshExec` を直接操作してコマンドを実行すること。SHA検証の結果によってコマンドの実行有無を制御する必要があるため、共通処理である
   `runCommand` には委譲できない設計となっている。
 - `movePaperMc` におけるPl3xMapの旧ファイル削除（`CMD_PL3XMAP_RM`）は、新バージョンのダウンロード有無にかかわらず**常に実行

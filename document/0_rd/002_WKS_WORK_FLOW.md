@@ -2,107 +2,62 @@
 
 ## 基本情報
 
-| 項目             | 内容                                                                                                      |
-|------------------|-----------------------------------------------------------------------------------------------------------|
-| 完全修飾クラス名 | `com.wks.workflow.WksWorkFlow`                                                                            |
-| ファイル名       | `WksWorkFlow.java`                                                                                        |
-| 種別             | class（public）                                                                                           |
-| 責務             | 5台のリモートサーバおよび自サーバに対する処理シーケンスを定義・実行する。サーバ間の処理順序を一元管理する |
-| 主な依存クラス   | `Main`、`SshCommand`、`BashExec`、`ConnectionInformation`、`WksConstants`                                 |
+| 項目             | 内容                                                                      |
+|------------------|---------------------------------------------------------------------------|
+| 完全修飾クラス名 | `com.wks.workflow.WksWorkFlow`                                            |
+| ファイル名       | `WksWorkFlow.java`                                                        |
+| 種別             | class（public）                                                           |
+| 責務             | リモート6台と管理端末の工程単位メンテナンスを定義・実行する               |
+| 主な依存クラス   | `Main`、`SshCommand`、`BashExec`、`ConnectionInformation`、`WksConstants` |
 
 ---
 
 ## 要求機能
 
-### WF-01：処理シーケンスの一元管理・直列実行
+### WF-01：接続情報一括設定・全機疎通確認
 
-- 全サーバ（サーバ0・サーバ1・サーバ2・サーバ3・サーバ4・自サーバ）への処理シーケンスを1箇所に集約して定義すること。
-- 各サーバへの処理は直列に実行し、前サーバの全処理完了後に次サーバの処理を開始すること。
-- 実行順序は サーバ0 → サーバ1 → サーバ2 → サーバ3 → サーバ4 → 自サーバ の順に固定すること。
-- リモートサーバ（サーバ0～4）は、処理開始時点で `SshCommand.isAlive(ci)` による疎通確認を行い、疎通不可の場合は警告ログを記録して対象サーバの処理をスキップすること。
+6ファイルを先に読み込み、サービス停止前に全機疎通確認を行うこと。
+確認対象をログへ記録し、最初の疎通不可で警告を出し、管理端末を含む全体の保守を開始せず復帰すること。
 
-### WF-02：サーバ0 のOSメンテナンス（SSH）
+### WF-02：工程単位の全台メンテナンス
 
-コマンドライン引数 `servers[0]` の接続情報を使用し、以下を順次実行すること。
+全台を同じ時間帯に保守し、各工程では引数順に直列実行すること。順序は次のとおりとする。
 
-1. 接続情報ファイルを読み込み `ConnectionInformation` を生成する
-2. サーバ処理開始区切りログをグローバルログへ追記する
-3. `SshCommand.isAlive(ci)` を実行する
-4. 疎通可能な場合のみ `SshCommand.update(ci)` を実行する
-5. 疎通可能な場合のみ `SshCommand.upgrade(ci)` を実行する
-6. 疎通可能な場合のみ `SshCommand.shutdown(ci)` を実行する
-7. 疎通不可の場合は `WksConstants.OTHER_NOT_ALIVE_MSG` をログへ追記し、サーバ1の処理へ進む
+```
+1. setConnectionInformation(servers): 6ファイルを読み込み cis[0]～cis[5] を設定
+2. isAllAlive(cis): 引数順に確認前ログを追記しSSH疎通確認
+   最初の疎通不可 → WARNING: Servers Not Active → 保守せずMainへ復帰
+3. systemStop(cis): PaperMC停止 → Schubert停止 → 管理端末で60秒待機（1回）
+4. allUMount(cis): サーバ0～4の /nas・/share を解除し、findmntの出力がないことを確認
+5. allUpdate(cis): サーバ0～5で1台ずつ update → upgrade
+6. allReboot(cis): サーバ0～5へ順に再起動指示
+7. BashExec.waitOneMin(): 管理端末で60秒待機（1回）
+8. allRebootComplete(cis): サーバ0～5を順に確認（各呼び出し600秒目安）
+9. allMount(cis): サーバ0～4の /nas・/share を接続し、findmntの出力があることを確認
+10. systemPreSetup(cis): サーバ1でバックアップ → PaperMC/Pl3xMap取得 → SHA検証・配置
+    wgetPaperMcの末尾で、管理端末のpapermc_version.txtを更新
+11. systemStart(cis): PaperMC起動 → Schubert起動
+12. 管理端末: 区切りログ → BashExec.update() → upgrade() → shutdown()
+13. Mainで終了時刻記録・ログファイル出力
+例外発生: 後続工程中止 → Mainでスタックトレース・終了ログ出力 → 手動復旧
+```
 
-### WF-03：サーバ1 のPaperMCサーバメンテナンス（SSH）
+### WF-03：対象サーバの役割
 
-コマンドライン引数 `servers[1]` の接続情報を使用し、以下を順次実行すること。
+| インデックス | 定数              | 役割             | 保守対象                                                           |
+|--------------|-------------------|------------------|--------------------------------------------------------------------|
+| 0            | `SERVER_TEST`     | テスト           | OS更新・再起動・共有解除と復旧                                     |
+| 1            | `SERVER_PAPER`    | PaperMC          | OS更新・再起動・共有解除と復旧・PaperMC停止/バックアップ/更新/起動 |
+| 2            | `SERVER_LLM`      | ローカルLLM      | OS更新・再起動・共有解除と復旧                                     |
+| 3            | `SERVER_SCHUBERT` | Schubert         | OS更新・再起動・共有解除と復旧・Schubert停止/起動                  |
+| 4            | `SERVER_VPN`      | VPN              | OS更新・再起動・共有解除と復旧                                     |
+| 5            | `SERVER_NAS`      | NAS              | OS更新・再起動。自身への共有操作は行わない                         |
+| 管理端末     | -                 | 本バッチ実行端末 | 固定待機・時刻取得、最後にOS更新・60秒遅延再起動                   |
 
-1. 接続情報ファイルを読み込み `ConnectionInformation` を生成する
-2. サーバ処理開始区切りログをグローバルログへ追記する
-3. `SshCommand.isAlive(ci)` を実行する
-4. 疎通可能な場合のみ `SshCommand.stopPaperMC(ci)` を実行する
-5. 疎通可能な場合のみPaperMCの安全停止を待つため `SshCommand.waitOneMin(ci)` を実行する
-6. 疎通可能な場合のみ `SshCommand.update(ci)` を実行する
-7. 疎通可能な場合のみ `SshCommand.upgrade(ci)` を実行する
-8. 疎通可能な場合のみ `SshCommand.backupPaperMC(ci)` を実行する
-9. 疎通可能な場合のみ `SshCommand.wgetPaperMc(ci)` を実行する（最新正式版の選択・ダウンロードと、管理端末へのバージョンファイル出力を含む）
-10. 疎通可能な場合のみ `SshCommand.movePaperMc(ci)` を実行する
-11. 疎通可能な場合のみ `SshCommand.shutdown(ci)` を実行する
-    - 再起動後の接続待機は `SshCommand` 内の `waitForBecomeActive` が自動的に処理する（FR-04 ステップ8に相当）。
-      `WksWorkFlow` 側での明示的な待機処理は不要
-12. 疎通可能な場合のみ `SshCommand.startPaperMC(ci)` を実行する
-13. 疎通不可の場合は `WksConstants.OTHER_NOT_ALIVE_MSG` をログへ追記し、サーバ2の処理へ進む
+### WF-04：異常時の停止
 
-### WF-04：サーバ2 のOSメンテナンス（SSH）
-
-コマンドライン引数 `servers[2]` の接続情報を使用し、以下を順次実行すること。
-
-1. 接続情報ファイルを読み込み `ConnectionInformation` を生成する
-2. サーバ処理開始区切りログをグローバルログへ追記する
-3. `SshCommand.isAlive(ci)` を実行する
-4. 疎通可能な場合のみ `SshCommand.update(ci)` を実行する
-5. 疎通可能な場合のみ `SshCommand.upgrade(ci)` を実行する
-6. 疎通可能な場合のみ `SshCommand.shutdown(ci)` を実行する
-7. 疎通不可の場合は `WksConstants.OTHER_NOT_ALIVE_MSG` をログへ追記し、サーバ3の処理へ進む
-
-### WF-05：サーバ3 のSchubertサーバメンテナンス（SSH）
-
-コマンドライン引数 `servers[3]` の接続情報を使用し、以下を順次実行すること。
-
-1. 接続情報ファイルを読み込み `ConnectionInformation` を生成する
-2. サーバ処理開始区切りログをグローバルログへ追記する
-3. `SshCommand.isAlive(ci)` を実行する
-4. 疎通可能な場合のみ `SshCommand.stopSchubert(ci)` を実行する
-5. 疎通可能な場合のみSchubertの安全停止を待つため `SshCommand.waitOneMin(ci)` を実行する
-6. 疎通可能な場合のみ `SshCommand.update(ci)` を実行する
-7. 疎通可能な場合のみ `SshCommand.upgrade(ci)` を実行する
-8. 疎通可能な場合のみ `SshCommand.shutdown(ci)` を実行する
-9. 疎通可能な場合のみ `SshCommand.startSchubert(ci)` を実行する
-10. 疎通不可の場合は `WksConstants.OTHER_NOT_ALIVE_MSG` をログへ追記し、サーバ4の処理へ進む
-
-### WF-06：サーバ4 のVPNサーバメンテナンス（SSH）
-
-コマンドライン引数 `servers[4]` の接続情報を使用し、以下を順次実行すること。
-
-1. 接続情報ファイルを読み込み `ConnectionInformation` を生成する
-2. サーバ処理開始区切りログをグローバルログへ追記する
-3. `SshCommand.isAlive(ci)` を実行する
-4. 疎通可能な場合のみ `SshCommand.update(ci)` を実行する
-5. 疎通可能な場合のみ `SshCommand.upgrade(ci)` を実行する
-6. 疎通可能な場合のみ `SshCommand.shutdown(ci)` を実行する
-7. 疎通不可の場合は `WksConstants.OTHER_NOT_ALIVE_MSG` をログへ追記し、自サーバ処理へ進む
-
-### WF-07：自サーバのOSメンテナンス（Bash）
-
-1. `WksConstants.LOG_SPLIT` のフォーマットに `WksConstants.LOG_THIS_SERVER` を埋め込んだ区切りログをグローバルログへ追記する
-2. `BashExec.update()` を実行する
-3. `BashExec.upgrade()` を実行する
-4. `BashExec.shutdown()` を実行する
-
-### WF-08：サーバ区切りログの記録
-
-- 各サーバの処理開始前に、`WksConstants.LOG_SPLIT` のフォーマットに従い接続情報文字列（host・port・user）を埋め込んだ区切りログをグローバルログへ追記すること。
-- 自サーバについては `WksConstants.LOG_THIS_SERVER` の文字列を区切りログへ追記すること。
+マウント状態不一致・復帰待ち超過等で例外を送出した場合は後続工程を中止し、手動復旧とすること。
+ログファイルにはMainがスタックトレースと終了時刻を記録すること。
 
 ---
 
@@ -110,42 +65,54 @@
 
 ### フィールド
 
-| フィールド名 | 型                  | 修飾子                 | 初期値     | 要件                                                          |
-|--------------|---------------------|------------------------|------------|---------------------------------------------------------------|
-| `log`        | `ArrayList<String>` | `private static final` | `Main.log` | `Main.log` への参照。サーバ処理開始の区切りログ追記に使用する |
+| フィールド名 | 型                  | 修飾子                 | 初期値     | 要件                                         |
+|--------------|---------------------|------------------------|------------|----------------------------------------------|
+| `log`        | `ArrayList<String>` | `private static final` | `Main.log` | 初期疎通確認対象・警告・管理端末区切りの追記 |
 
 ### メソッド
 
-| メソッド名         | 戻り値型 | 修飾子          | 要件概要                                                               |
-|--------------------|----------|-----------------|------------------------------------------------------------------------|
-| `execScheduledJob` | `void`   | `public static` | 6つの対象に対して定型処理を直列に順次実行する。引数は5つのファイルパス |
+| メソッド名                                       | 戻り値型                  | 修飾子           | 処理                                        |
+|--------------------------------------------------|---------------------------|------------------|---------------------------------------------|
+| `execScheduledJob(String[] servers)`             | `void`                    | `public static`  | 6接続ファイルで全体の工程を実行             |
+| `setConnectionInformation(String[] servers)`     | `ConnectionInformation[]` | `private static` | 全ファイルを引数順に読込                    |
+| `isAllAlive(ConnectionInformation[] cis)`        | `boolean`                 | `private static` | 各対象をログへ記録し、最初の疎通不可でfalse |
+| `systemStop(ConnectionInformation[] cis)`        | `void`                    | `private static` | 両サービス停止後に共通60秒待機              |
+| `allUMount(ConnectionInformation[] cis)`         | `void`                    | `private static` | NASを除き共有解除・状態確認                 |
+| `allUpdate(ConnectionInformation[] cis)`         | `void`                    | `private static` | 全6台の更新                                 |
+| `allReboot(ConnectionInformation[] cis)`         | `void`                    | `private static` | 全6台へ再起動指示                           |
+| `allRebootComplete(ConnectionInformation[] cis)` | `void`                    | `private static` | 各台600秒目安のSSH復帰待ち                  |
+| `allMount(ConnectionInformation[] cis)`          | `void`                    | `private static` | NASを除き共有接続・状態確認                 |
+| `systemPreSetup(ConnectionInformation[] cis)`    | `void`                    | `private static` | PaperMCバックアップ・取得・配置             |
+| `systemStart(ConnectionInformation[] cis)`       | `void`                    | `private static` | PaperMC・Schubert起動                       |
 
 ---
 
 ## 例外要件
 
-| 例外クラス                   | 想定発生状況                                                                                      |
+| 例外クラス                   | 発生条件                                                                                          |
 |------------------------------|---------------------------------------------------------------------------------------------------|
-| `IOException`                | 接続情報ファイル読込失敗・SSH出力読取失敗・Bashコマンド実行失敗・バージョンファイルのオープン失敗 |
-| `InterruptedException`       | SSH/Bashコマンド実行中の割り込み                                                                  |
-| `JSchException`              | SSH接続・実行失敗                                                                                 |
-| `RuntimeException`（非検査） | PaperMC正式版が全系列に見つからない場合                                                           |
+| `IOException`                | 接続ファイル読込、SSH標準出力取得、Bash実行・時刻取得、HTTP通信、バージョンファイルのオープン失敗 |
+| `InterruptedException`       | SSH・Bash・ポーリング待機中の割り込み                                                             |
+| `JSchException`              | セッション生成・SSH接続・コマンド実行失敗                                                         |
+| `RuntimeException`（非検査） | マウント状態不一致、SSH復帰待ち超過、PaperMC正式版未検出                                          |
 
-- 検査例外は `throws` 宣言で委譲し、非検査例外も含めて `Main.main` まで伝播させ、スタックトレースをログへ記録すること。
+検査例外・非検査例外とも `Main.main` へ伝播する。初期疎通不可は例外ではなく警告ログを残して復帰する。
 
 ---
 
 ## 制約・注意事項
 
-- PaperMCバージョンファイルは `wgetPaperMc` 内で、管理端末の `/home/mini/wakasaba_orchestrator/papermc_version.txt`
-  へ出力すること。SHA検証・本番配置前であり、サーバ1のスキップや出力到達前の例外発生時は更新しないこと。
-- サーバ1はPaperMCサーバであり、PaperMC固有の処理が含まれること。
-- サーバ3はSchubertサーバであり、Schubert停止・起動シェルの実行を含むこと。
-- サーバ4はVPNサーバであり、OS更新・アップグレード・再起動のみを行うこと。
-- リモートサーバが処理開始時点で非アクティブの場合、そのサーバの保守処理は実行せず、警告ログを出して後続サーバへ進むこと。
-- Schubert停止後は固定60秒待機し、停止状態の動的確認は行わず後続処理へ進むこと。
-- PaperMC停止後はグレースフルシャットダウン、ファイルクローズおよびセーブデータのフラッシュ完了を待つため、固定60秒の待機を行うこと。
-- 60秒経過時点で停止状態の動的確認は行わず、異常停止状態であっても後続処理を継続すること。
-- `SshCommand.shutdown()` による再起動後も後続処理が続く場合は、`SshCommand` 内のポーリング機構が再起動完了を待機するため、
-  `WksWorkFlow` 側での待機処理は不要である。
-- 自サーバの `BashExec.shutdown()` は60秒遅延バックグラウンド実行であり、呼出し直後にバッチ処理は終了する。
+- 全台メンテナンスは工程単位の直列処理であり、並列実行ではない。
+- 全機疎通確認はサービス停止前に行い、最初の失敗で中止する。管理端末のOS更新も開始しない。
+- 初期疎通確認前に `Checking Connection: %s`（host・port・user）を記録する。リモート各台の `LOG_SPLIT`
+  は記録せず、管理端末の区切りのみ維持する。
+- NAS以外のリモート5台には `/nas`・`/share` の設定、`findmnt` と必要な権限があることを前提とする。管理端末は共有操作対象外。
+- 両サービス停止後の固定待機は管理端末で1回60秒のみ。停止状態の動的確認は行わない。
+- 全台再起動指示後も管理端末で1回60秒待機し、その後SSH復帰を待つ。boot_idは確認しない。
+- 復帰待ちはサーバごとに `SERVER_REBOOT_WAIT_LIMIT = 600` 秒を指定する。失敗した試行後に期限超過を確認し、最後の試行が成功すれば期限後でも続行する。厳密な600秒の締切ではない。
+- SSH疎通確認は `session.connect(60000)` を使用する。通常のコマンド実行前の1引数版待機は `Integer.MAX_VALUE`
+  秒を指定するため、再起動後の明示待機とは異なる。
+- バックアップ・ダウンロード・配置は全台復帰と全共有再マウント後。バージョンファイルの内容・出力端末・SHA検証前の出力仕様はNo.307・308から変更しない。
+- マウント有無は `findmnt` の標準出力の有無で判定する。状態不一致は実行時例外。共有元照合、確認コマンド自体の失敗検知、解除リトライは追加しない。
+- 例外時は残りの工程を打ち切り、サービスの自動復旧やロールバックは行わない。PaperMC処理の例外でもSchubertを起動せず、手動復旧する。
+- 自サーバの再起動は従来どおり60秒遅延バックグラウンド実行。

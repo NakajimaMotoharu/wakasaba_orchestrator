@@ -28,110 +28,46 @@ public class WksWorkFlow {
      * @throws JSchException        SSH・BASH実行失敗時
      */
     public static void execScheduledJob(String[] servers) throws IOException, InterruptedException, JSchException {
-        // サーバ0
-        // サーバ0の接続情報を設定
-        ConnectionInformation ci0 = ConnectionInformation.getCiFromFile(servers[0]);
-        // サーバ0の接続情報をログに設定
-        log.add(String.format(WksConstants.LOG_SPLIT, ci0));
-        // ci0がアクティブであれば実行
-        if (SshCommand.isAlive(ci0)){
-            // updateコマンド実行
-            SshCommand.update(ci0);
-            // upgradeコマンド実行
-            SshCommand.upgrade(ci0);
-            // shutdownコマンド実行
-            SshCommand.shutdown(ci0);
-        } else {
+
+        // サーバの接続情報を取得
+        ConnectionInformation[] cis = setConnectionInformation(servers);
+
+        // サーバが全て接続可能か確認
+        if (!isAllAlive(cis)){
+            // 接続不可能である警告メッセージをログに出力
             log.add(WksConstants.OTHER_NOT_ALIVE_MSG);
+            // 呼び出し元に復帰する
+            return;
         }
 
-        // サーバ1
-        // サーバ1の接続情報を設定
-        ConnectionInformation ci1 = ConnectionInformation.getCiFromFile(servers[1]);
-        // サーバ1の接続情報をログに設定
-        log.add(String.format(WksConstants.LOG_SPLIT, ci1));
-        // ci1がアクティブであれば実行
-        if (SshCommand.isAlive(ci1)){
-            // PaperMC停止コマンドの実行
-            SshCommand.stopPaperMC(ci1);
-            // 安全停止のため1分間待機
-            SshCommand.waitOneMin(ci1);
-            // updateコマンドの実行
-            SshCommand.update(ci1);
-            // upgradeコマンドの実行
-            SshCommand.upgrade(ci1);
-            // バックアップシェルの実行
-            SshCommand.backupPaperMC(ci1);
-            // PaperMCサーバクライアントの取得
-            SshCommand.wgetPaperMc(ci1);
-            // PaperMCサーバクライアントの配置
-            SshCommand.movePaperMc(ci1);
-            // shutdownコマンドの実行
-            SshCommand.shutdown(ci1);
-            // PaperMC起動コマンドの実行
-            SshCommand.startPaperMC(ci1);
-        } else {
-            log.add(WksConstants.OTHER_NOT_ALIVE_MSG);
-        }
+        // システム停止
+        systemStop(cis);
 
-        // サーバ2
-        // サーバ2の接続情報を設定
-        ConnectionInformation ci2 = ConnectionInformation.getCiFromFile(servers[2]);
-        // サーバ2の接続情報をログに設定
-        log.add(String.format(WksConstants.LOG_SPLIT, ci2));
-        // ci2がアクティブであれば実行
-        if (SshCommand.isAlive(ci2)){
-            // updateコマンドの実行
-            SshCommand.update(ci2);
-            // upgradeコマンドの実行
-            SshCommand.upgrade(ci2);
-            // shutdownコマンドの実行
-            SshCommand.shutdown(ci2);
-        } else {
-            log.add(WksConstants.OTHER_NOT_ALIVE_MSG);
-        }
+        // NASマウント解除
+        allUMount(cis);
 
-        // サーバ3
-        // サーバ3の接続情報を設定
-        ConnectionInformation ci3 = ConnectionInformation.getCiFromFile(servers[3]);
-        // サーバ3の接続情報をログに設定
-        log.add(String.format(WksConstants.LOG_SPLIT, ci3));
-        // ci3がアクティブであれば実行
-        if (SshCommand.isAlive(ci3)){
-            // Schubert停止コマンドの実行
-            SshCommand.stopSchubert(ci3);
-            // 安全停止のため1分間待機
-            SshCommand.waitOneMin(ci3);
-            // updateコマンドの実行
-            SshCommand.update(ci3);
-            // upgradeコマンドの実行
-            SshCommand.upgrade(ci3);
-            // shutdownコマンドの実行
-            SshCommand.shutdown(ci3);
-            // Schubert起動コマンドの実行
-            SshCommand.startSchubert(ci3);
-        } else {
-            log.add(WksConstants.OTHER_NOT_ALIVE_MSG);
-        }
+        // サーバアップデート
+        allUpdate(cis);
 
-        // サーバ4
-        // サーバ4の接続情報を設定
-        ConnectionInformation ci4 = ConnectionInformation.getCiFromFile(servers[4]);
-        // サーバ4の接続情報をログに設定
-        log.add(String.format(WksConstants.LOG_SPLIT, ci4));
-        // ci4がアクティブであれば実行
-        if (SshCommand.isAlive(ci4)){
-            // updateコマンド実行
-            SshCommand.update(ci4);
-            // upgradeコマンド実行
-            SshCommand.upgrade(ci4);
-            // shutdownコマンド実行
-            SshCommand.shutdown(ci4);
-        } else {
-            log.add(WksConstants.OTHER_NOT_ALIVE_MSG);
-        }
+        // サーバ再起動
+        allReboot(cis);
 
-        // 自サーバ
+        // 再起動後固定待機
+        BashExec.waitOneMin();
+
+        // サーバ再起動完了待機
+        allRebootComplete(cis);
+
+        // NASマウント
+        allMount(cis);
+
+        // システム起動前処理
+        systemPreSetup(cis);
+
+        // システム起動
+        systemStart(cis);
+
+        // 管理サーバメンテ
         // 自サーバの接続情報をログに設定
         log.add(String.format(WksConstants.LOG_SPLIT, WksConstants.LOG_THIS_SERVER));
         // updateコマンドの実行
@@ -140,5 +76,186 @@ public class WksWorkFlow {
         BashExec.upgrade();
         // shutdownコマンドの実行
         BashExec.shutdown();
+    }
+
+    /**
+     * サーバの接続情報を一括設定
+     *
+     * @param servers サーバ情報ファイルパス
+     * @return サーバ接続情報配列
+     * @throws IOException ファイル読み込み失敗
+     */
+    private static ConnectionInformation[] setConnectionInformation(String[] servers) throws IOException {
+        // 返却用サーバ接続情報配列を初期化
+        ConnectionInformation[] cis = new ConnectionInformation[servers.length];
+
+        // サーバ情報ファイルの数だけ設定
+        for (int i = 0; i < servers.length; i++){
+            // 各サーバに対して接続情報を取得
+            cis[i] = ConnectionInformation.getCiFromFile(servers[i]);
+        }
+
+        // 設定済みサーバ接続情報を返却
+        return cis;
+    }
+
+    /**
+     * サーバが全機疎通可能状態か確認
+     *
+     * @param cis サーバ接続情報配列
+     * @return 接続状態
+     * @throws JSchException セッションインスタンス生成失敗
+     */
+    private static boolean isAllAlive(ConnectionInformation[] cis) throws JSchException {
+        // 各サーバ情報に対して実行
+        for (ConnectionInformation ci : cis) {
+            // 検証先をログ出力
+            log.add(String.format(WksConstants.OTHER_CONNECTION_CHECK, ci.toString()));
+            // サーバが接続可能状態か判定
+            if (!SshCommand.isAlive(ci)) {
+                // 1台でも接続不可能なマシンがあればfalseを返却
+                return false;
+            }
+        }
+        // 全機接続可能であればtrueを返却
+        return true;
+    }
+
+    /**
+     * サーバ全機再起動
+     *
+     * @param cis サーバ接続情報配列
+     * @throws JSchException SSHコマンド実行に失敗
+     * @throws IOException SSHコマンド標準出力取得に失敗
+     * @throws InterruptedException SSHコマンド実行に失敗
+     */
+    private static void allReboot(ConnectionInformation[] cis) throws JSchException, IOException, InterruptedException {
+        // 全機に対してコマンド実行
+        for (ConnectionInformation ci : cis) {
+            // 再起動コマンドの実行
+            SshCommand.shutdown(ci);
+        }
+    }
+
+    /**
+     * サーバ全機再起動完了を待機
+     *
+     * @param cis サーバ接続情報配列
+     * @throws JSchException SSHコマンド実行に失敗
+     * @throws InterruptedException SSHコマンド実行に失敗
+     * @throws IOException Bashコマンド実行に失敗
+     */
+    private static void allRebootComplete(ConnectionInformation[] cis) throws JSchException, InterruptedException, IOException {
+        // 全機に対してコマンド実行
+        for (ConnectionInformation ci : cis) {
+            // 疎通可能になるまで待機
+            SshCommand.waitForBecomeActive(ci, WksConstants.SERVER_REBOOT_WAIT_LIMIT);
+        }
+    }
+
+    /**
+     * サーバ全機更新
+     *
+     * @param cis サーバ接続情報配列
+     * @throws JSchException SSHコマンド実行に失敗
+     * @throws IOException SSHコマンド標準出力取得に失敗
+     * @throws InterruptedException SSHコマンド実行に失敗
+     */
+    private static void allUpdate(ConnectionInformation[] cis) throws JSchException, IOException, InterruptedException {
+        // 全機に対してコマンド実行
+        for (ConnectionInformation ci : cis) {
+            // UPDATEコマンドの実行
+            SshCommand.update(ci);
+            // UPGRADEコマンドの実行
+            SshCommand.upgrade(ci);
+        }
+    }
+
+    /**
+     * サーバnas以外全機マウント実行
+     *
+     * @param cis サーバ接続情報配列
+     * @throws JSchException SSHコマンド実行に失敗
+     * @throws IOException SSHコマンド標準出力取得に失敗
+     * @throws InterruptedException SSHコマンド実行に失敗
+     */
+    private static void allMount(ConnectionInformation[] cis) throws JSchException, IOException, InterruptedException {
+        // 全機に対してコマンド実行
+        for (int i = 0; i < cis.length; i++){
+            // 実行対象がnasでない場合実行
+            if (i != WksConstants.SERVER_NAS){
+                SshCommand.mount(cis[i]);
+            }
+        }
+    }
+
+    /**
+     * サーバnas以外全機アンマウント実行
+     *
+     * @param cis サーバ接続情報配列
+     * @throws JSchException SSHコマンド実行に失敗
+     * @throws IOException SSHコマンド標準出力取得に失敗
+     * @throws InterruptedException SSHコマンド実行に失敗
+     */
+    private static void allUMount(ConnectionInformation[] cis) throws JSchException, IOException, InterruptedException {
+        // 全機に対してコマンド実行
+        for (int i = 0; i < cis.length; i++){
+            // 実行対象がnasでない場合実行
+            if (i != WksConstants.SERVER_NAS){
+                SshCommand.umount(cis[i]);
+            }
+        }
+    }
+
+    /**
+     * システム停止
+     *
+     * @param cis サーバ接続情報配列
+     * @throws JSchException SSHコマンド実行に失敗
+     * @throws IOException SSHコマンド標準出力取得に失敗
+     * @throws InterruptedException SSHコマンド実行に失敗
+     */
+    private static void systemStop(ConnectionInformation[] cis) throws JSchException, IOException, InterruptedException {
+        // PaperMCサーバ システム停止
+        SshCommand.stopPaperMC(cis[WksConstants.SERVER_PAPER]);
+
+        // Schubertサーバ システム停止
+        SshCommand.stopSchubert(cis[WksConstants.SERVER_SCHUBERT]);
+
+        // 安全停止のため1分間待機
+        BashExec.waitOneMin();
+    }
+
+    /**
+     * システム起動前処理
+     *
+     * @param cis サーバ接続情報配列
+     * @throws JSchException SSHコマンド実行に失敗
+     * @throws IOException SSHコマンド標準出力取得に失敗
+     * @throws InterruptedException SSHコマンド実行に失敗
+     */
+    private static void systemPreSetup(ConnectionInformation[] cis) throws JSchException, IOException, InterruptedException {
+        // PaperMCサーバ 起動前処理
+        // バックアップシェルの実行
+        SshCommand.backupPaperMC(cis[WksConstants.SERVER_PAPER]);
+        // PaperMCサーバクライアントの取得
+        SshCommand.wgetPaperMc(cis[WksConstants.SERVER_PAPER]);
+        // PaperMCサーバクライアントの配置
+        SshCommand.movePaperMc(cis[WksConstants.SERVER_PAPER]);
+    }
+
+    /**
+     * システム起動
+     *
+     * @param cis サーバ接続情報配列
+     * @throws JSchException SSHコマンド実行に失敗
+     * @throws IOException SSHコマンド標準出力取得に失敗
+     * @throws InterruptedException SSHコマンド実行に失敗
+     */
+    private static void systemStart(ConnectionInformation[] cis) throws JSchException, IOException, InterruptedException {
+        // PaperMCサーバ システム起動
+        SshCommand.startPaperMC(cis[WksConstants.SERVER_PAPER]);
+        // Schubert起動コマンドの実行
+        SshCommand.startSchubert(cis[WksConstants.SERVER_SCHUBERT]);
     }
 }

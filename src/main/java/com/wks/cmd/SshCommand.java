@@ -4,6 +4,7 @@ import com.jcraft.jsch.JSchException;
 import com.wks.main.Main;
 import com.wks.papermc.PaperUrlGen;
 import com.wks.parts.WksConstants;
+import com.wks.util.BashExec;
 import com.wks.util.ConnectionInformation;
 import com.wks.util.Curl;
 import com.wks.util.SshExec;
@@ -304,19 +305,6 @@ public class SshCommand {
     }
 
     /**
-     * 1分間待機するコマンドの実行
-     *
-     * @param ci サーバ情報
-     * @throws JSchException        SSHコマンド実行に失敗
-     * @throws InterruptedException SSHコマンド実行に失敗
-     * @throws IOException          SSHコマンド標準出力取得に失敗
-     */
-    public static void waitOneMin(ConnectionInformation ci) throws JSchException, IOException, InterruptedException {
-        // 1分間待機するコマンドの実行
-        runCommand(ci, WksConstants.CMD_WAIT_ONE_MIN);
-    }
-
-    /**
      * PaperMCバックアップシェルの実行
      *
      * @param ci サーバ情報
@@ -333,11 +321,13 @@ public class SshCommand {
      * 任意のコマンド実行
      *
      * @param ci サーバ情報
+     * @param cmd 実行コマンド
+     * @return 応答
      * @throws JSchException        SSHコマンド実行に失敗
      * @throws InterruptedException SSHコマンド実行に失敗
      * @throws IOException          SSHコマンド標準出力取得に失敗
      */
-    private static void runCommand(ConnectionInformation ci, String cmd) throws JSchException, InterruptedException, IOException {
+    private static String[] runCommand(ConnectionInformation ci, String cmd) throws JSchException, InterruptedException, IOException {
         // Active待機
         waitForBecomeActive(ci);
 
@@ -352,6 +342,9 @@ public class SshCommand {
 
         // 返り値をログに追加
         log.addAll(Arrays.asList(ret));
+
+        // 返り値を返却
+        return ret;
     }
 
     /**
@@ -360,16 +353,36 @@ public class SshCommand {
      * @param ci サーバ情報
      * @throws JSchException        SSHコマンド実行に失敗
      * @throws InterruptedException SSHコマンド実行に失敗
+     * @throws IOException Bashコマンド実行に失敗
      */
-    private static void waitForBecomeActive(ConnectionInformation ci) throws JSchException, InterruptedException {
+    public static void waitForBecomeActive(ConnectionInformation ci, int limit) throws JSchException, InterruptedException, IOException {
+        // 現在のUNIX時間を取得
+        long startUnixTime = BashExec.getNowTime();
+
         // 何もしないコマンドを実行するsshExecを作成
         SshExec sshExec = new SshExec(ci, WksConstants.CMD_DO_NOTHING);
 
         // Activeになるまでループ
         while (!sshExec.isAlive()) {
-            // Active出なければ1秒待機
+            // 待機時間が設定上限をオーバした場合
+            if (startUnixTime + limit < BashExec.getNowTime()){
+                throw new RuntimeException(String.format(WksConstants.OTHER_REBOOT_EXCEPTION, ci.toString()));
+            }
+            // Activeでなければ1秒待機
             Thread.sleep(1000);
         }
+    }
+
+    /**
+     * ci情報に接続可能になるまで待機
+     *
+     * @param ci サーバ情報
+     * @throws JSchException        SSHコマンド実行に失敗
+     * @throws InterruptedException SSHコマンド実行に失敗
+     * @throws IOException SSHコマンド実行に失敗
+     */
+    public static void waitForBecomeActive(ConnectionInformation ci) throws JSchException, InterruptedException, IOException {
+        waitForBecomeActive(ci, Integer.MAX_VALUE);
     }
 
     /**
@@ -383,6 +396,58 @@ public class SshCommand {
         SshExec sshExec = new SshExec(ci, WksConstants.CMD_DO_NOTHING);
 
         return sshExec.isAlive();
+    }
+
+    /**
+     * nasとshareマウント実行
+     *
+     * @param ci サーバ情報
+     * @throws JSchException        SSHコマンド実行に失敗
+     * @throws InterruptedException SSHコマンド実行に失敗
+     * @throws IOException          SSHコマンド標準出力取得に失敗
+     */
+    public static void mount(ConnectionInformation ci) throws JSchException, InterruptedException, IOException {
+        // nasのマウントコマンドの実行
+        runCommand(ci, WksConstants.CMD_MOUNT_NAS);
+        // shareのマウントコマンドの実行
+        runCommand(ci, WksConstants.CMD_MOUNT_SHARE);
+
+        // nasのマウント状態確認
+        if (runCommand(ci, WksConstants.CMD_MOUNT_STATUS_NAS).length == 0){
+            // マウント状態になっていなければ例外を出力
+            throw new RuntimeException(WksConstants.OTHER_MOUNT_STATUS_EXCEPTION);
+        }
+        // shareのマウント状態確認
+        if (runCommand(ci, WksConstants.CMD_MOUNT_STATUS_SHARE).length == 0){
+            // マウント状態になっていなければ例外を出力
+            throw new RuntimeException(WksConstants.OTHER_MOUNT_STATUS_EXCEPTION);
+        }
+    }
+
+    /**
+     * nasとshareアンマウント実行
+     *
+     * @param ci サーバ情報
+     * @throws JSchException        SSHコマンド実行に失敗
+     * @throws InterruptedException SSHコマンド実行に失敗
+     * @throws IOException          SSHコマンド標準出力取得に失敗
+     */
+    public static void umount(ConnectionInformation ci) throws JSchException, InterruptedException, IOException {
+        // nasのアンマウントコマンドの実行
+        runCommand(ci, WksConstants.CMD_UMOUNT_NAS);
+        // shareのアンマウントコマンドの実行
+        runCommand(ci, WksConstants.CMD_UMOUNT_SHARE);
+
+        // nasのマウント状態確認
+        if (runCommand(ci, WksConstants.CMD_MOUNT_STATUS_NAS).length != 0){
+            // マウント状態が解除されていなければ例外を出力
+            throw new RuntimeException(WksConstants.OTHER_MOUNT_STATUS_EXCEPTION);
+        }
+        // shareのマウント状態確認
+        if (runCommand(ci, WksConstants.CMD_MOUNT_STATUS_SHARE).length != 0){
+            // マウント状態が解除されていなければ例外を出力
+            throw new RuntimeException(WksConstants.OTHER_MOUNT_STATUS_EXCEPTION);
+        }
     }
 
 }
