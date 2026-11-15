@@ -36,16 +36,17 @@
 
 ### 非検査例外（Unchecked Exception）
 
-| 例外クラス                   | 主な発生箇所                          | 原因                                           |
-|------------------------------|---------------------------------------|------------------------------------------------|
-| `RuntimeException`           | `PaperUrlGen.getPaperMcVersion`       | 全系列に正式版が見つからない（空の一覧を含む） |
-| `RuntimeException`           | `SshCommand.mount` / `umount`         | マウント有無が期待状態と不一致                 |
-| `RuntimeException`           | `SshCommand.waitForBecomeActive`      | 失敗したSSH接続試行後、指定秒数の経過を検出    |
-| `NumberFormatException`      | `BashExec.getNowTime`                 | UNIX時刻の先頭行をlongに変換できない           |
-| `NumberFormatException`      | `ConnectionInformation.getCiFromFile` | 接続情報ファイルの2行目が整数値でない          |
-| `IndexOutOfBoundsException`  | `ConnectionInformation.getCiFromFile` | 接続情報ファイルが4行未満                      |
-| `JacksonException`（非検査） | `PaperUrlGen` 全メソッド              | JSONパース失敗（APIレスポンス形式の変更等）    |
-| `NullPointerException`       | `PaperUrlGen` 全メソッド              | JSONのキーが存在しない場合                     |
+| 例外クラス                   | 主な発生箇所                          | 原因                                                  |
+|------------------------------|---------------------------------------|-------------------------------------------------------|
+| `RuntimeException`           | `PaperUrlGen.getPaperMcVersion`       | 全系列に正式版が見つからない（空の一覧を含む）        |
+| `RuntimeException`           | `UpdateThread.exceptionDetection`     | 子スレッドが保持したその他Exceptionを原因付きで再送出 |
+| `RuntimeException`           | `SshCommand.mount` / `umount`         | マウント有無が期待状態と不一致                        |
+| `RuntimeException`           | `SshCommand.waitForBecomeActive`      | 失敗したSSH接続試行後、指定秒数の経過を検出           |
+| `NumberFormatException`      | `BashExec.getNowTime`                 | UNIX時刻の先頭行をlongに変換できない                  |
+| `NumberFormatException`      | `ConnectionInformation.getCiFromFile` | 接続情報ファイルの2行目が整数値でない                 |
+| `IndexOutOfBoundsException`  | `ConnectionInformation.getCiFromFile` | 接続情報ファイルが4行未満                             |
+| `JacksonException`（非検査） | `PaperUrlGen` 全メソッド              | JSONパース失敗（APIレスポンス形式の変更等）           |
+| `NullPointerException`       | `PaperUrlGen` 全メソッド              | JSONのキーが存在しない場合                            |
 
 ---
 
@@ -58,6 +59,31 @@
 - 時刻取得・待機で発生した `IOException`・`InterruptedException` もMainへ伝播する。
 - 例外発生時は後続工程を実行しない。PaperMC固有の例外でもSchubertを起動しない。自動復旧・ロールバックは行わず、ログを確認して手動復旧する。
 - `SshExec.execute()` の終了コード取得は追加しない。
+
+---
+
+## 並列更新の例外伝播（No.310）
+
+- 更新スレッド内の例外は保存し、全スレッドの終了待ち後に親スレッドで引数順に検出する。
+- `JSchException`・`IOException`・`InterruptedException` は同じ例外を再送出し、その他の `Exception` は原因を保持した
+  `RuntimeException` で再送出する。
+- 親スレッドで例外を再送出した場合は、再起動以降を実行せず、従来どおりMainでログ出力して手動復旧する。
+- 更新失敗時もほかの開始済みタスクはキャンセルせず、終了を待つ。複数の失敗は集約せず、引数順で最初に検出した例外を再送出する。
+
+```
+子: UpdateThread.run()
+  → update → upgrade
+  → catch: 例外を対応フィールドへ保存して終了
+親: WksWorkFlow.allUpdate()
+  → 全スレッドjoin
+  → 引数順にexceptionDetection()
+  → 検査例外はそのまま、その他ExceptionはRuntimeException(cause)で再送出
+  → WksWorkFlow.execScheduledJob → Main.main
+  → スタックトレース・終了時刻記録 → ログ出力 → 手動復旧
+```
+
+`join()` 自体の割り込みは親の `InterruptedException` として上位へ委譲する。子スレッドのキャンセルは行わない。
+`Error` は捕捉対象外。共有ログは `List<String>` 型の `CopyOnWriteArrayList` を使用し、並列追記に対応するが、サーバ間の記録順は不定である。
 
 ---
 
