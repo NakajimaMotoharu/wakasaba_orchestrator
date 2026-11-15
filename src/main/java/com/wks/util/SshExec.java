@@ -57,8 +57,8 @@ public class SshExec {
         Session session = getSessionInstance();
 
         try {
-            // 接続テスト
-            session.connect();
+            // 接続テスト(60秒上限)
+            session.connect(60000);
         } catch (JSchException e) {
             // 接続失敗した場合、疎通不可と判断
             return false;

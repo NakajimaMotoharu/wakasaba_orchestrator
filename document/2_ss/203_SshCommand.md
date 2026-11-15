@@ -8,7 +8,7 @@
 | ファイル名       | `SshCommand.java`                                                                                 |
 | 種別             | class（public）                                                                                   |
 | 責務             | SSH経由で実行する各種コマンドの業務ロジックラッパー。コマンドの組み立て・実行・ログ記録を集約する |
-| 依存クラス       | `Main`, `SshExec`, `ConnectionInformation`, `Curl`, `PaperUrlGen`, `WksConstants`                 |
+| 依存クラス       | `Main`, `SshExec`, `ConnectionInformation`, `Curl`, `PaperUrlGen`, `WksConstants`, `BashExec`     |
 
 ---
 
@@ -22,22 +22,24 @@
 
 ## メソッド一覧
 
-| メソッド名            | 戻り値型  | 修飾子           | 説明                                                                     |
-|-----------------------|-----------|------------------|--------------------------------------------------------------------------|
-| `update`              | `void`    | `public static`  | `sudo apt update` を実行する                                             |
-| `upgrade`             | `void`    | `public static`  | `sudo apt upgrade -y` を実行する                                         |
-| `shutdown`            | `void`    | `public static`  | `sudo shutdown -r now` を実行する                                        |
-| `wgetPaperMc`         | `void`    | `public static`  | PaperMC・Pl3xMapをダウンロードし、管理端末へバージョンファイルを出力する |
-| `movePaperMc`         | `void`    | `public static`  | ダウンロードしたPaperMC・Pl3xMapをSHA検証後に本番ディレクトリへ移動する  |
-| `startPaperMC`        | `void`    | `public static`  | `sudo systemctl start papermc` を実行する                                |
-| `stopPaperMC`         | `void`    | `public static`  | `sudo systemctl stop papermc` を実行する                                 |
-| `waitOneMin`          | `void`    | `public static`  | `sleep 60` を実行する                                                    |
-| `startSchubert`       | `void`    | `public static`  | Schubert起動シェルを実行する                                             |
-| `stopSchubert`        | `void`    | `public static`  | Schubert停止シェルを実行する                                             |
-| `backupPaperMC`       | `void`    | `public static`  | バックアップシェルを実行する                                             |
-| `isAlive`             | `boolean` | `public static`  | 対象サーバへSSH接続可能か判定する                                        |
-| `runCommand`          | `void`    | `private static` | 任意コマンドの実行・ログ記録の共通処理                                   |
-| `waitForBecomeActive` | `void`    | `private static` | 対象サーバが疎通可能になるまでポーリング待機する                         |
+| メソッド名                       | 戻り値型   | 修飾子           | 説明                                                                     |
+|----------------------------------|------------|------------------|--------------------------------------------------------------------------|
+| `update`                         | `void`     | `public static`  | `sudo apt update` を実行する                                             |
+| `upgrade`                        | `void`     | `public static`  | `sudo apt upgrade -y` を実行する                                         |
+| `shutdown`                       | `void`     | `public static`  | `sudo shutdown -r now` を実行する                                        |
+| `wgetPaperMc`                    | `void`     | `public static`  | PaperMC・Pl3xMapをダウンロードし、管理端末へバージョンファイルを出力する |
+| `movePaperMc`                    | `void`     | `public static`  | ダウンロードしたPaperMC・Pl3xMapをSHA検証後に本番ディレクトリへ移動する  |
+| `startPaperMC`                   | `void`     | `public static`  | `sudo systemctl start papermc` を実行する                                |
+| `stopPaperMC`                    | `void`     | `public static`  | `sudo systemctl stop papermc` を実行する                                 |
+| `startSchubert`                  | `void`     | `public static`  | Schubert起動シェルを実行する                                             |
+| `stopSchubert`                   | `void`     | `public static`  | Schubert停止シェルを実行する                                             |
+| `backupPaperMC`                  | `void`     | `public static`  | バックアップシェルを実行する                                             |
+| `isAlive`                        | `boolean`  | `public static`  | 対象サーバへSSH接続可能か判定する                                        |
+| `mount`                          | `void`     | `public static`  | /nas・/share接続と状態確認                                               |
+| `umount`                         | `void`     | `public static`  | /nas・/share解除と状態確認                                               |
+| `runCommand`                     | `String[]` | `private static` | 任意コマンドの実行・ログ記録の共通処理                                   |
+| `waitForBecomeActive`            | `void`     | `public static`  | 対象サーバが疎通可能になるまでポーリング待機する                         |
+| `waitForBecomeActive(ci, limit)` | `void`     | `public static`  | 上限秒数指定の復帰待ち                                                   |
 
 ---
 
@@ -211,18 +213,6 @@ public static void stopPaperMC(ConnectionInformation ci)
 
 ---
 
-### `waitOneMin(ConnectionInformation ci)`
-
-```java
-public static void waitOneMin(ConnectionInformation ci)
-        throws JSchException, IOException, InterruptedException;
-```
-
-`runCommand(ci, WksConstants.CMD_WAIT_ONE_MIN)` を呼び出し、対象サーバ上で `sleep 60` を実行する。  
-PaperMC停止後の安全停止待機に使用し、呼び出し元はSSHコマンド完了までブロッキングされる。
-
----
-
 ### `startSchubert(ConnectionInformation ci)`
 
 ```java
@@ -262,12 +252,12 @@ public static void backupPaperMC(ConnectionInformation ci)
 ### `runCommand(ConnectionInformation ci, String cmd)` ※private
 
 ```java
-private static void runCommand(ConnectionInformation ci, String cmd)
+private static String[] runCommand(ConnectionInformation ci, String cmd)
         throws JSchException, InterruptedException, IOException;
 ```
 
-コマンド実行の共通処理。`update`・`upgrade`・`shutdown`・`startPaperMC`・`stopPaperMC`・`waitOneMin`・`startSchubert`・
-`stopSchubert`・`backupPaperMC`・`wgetPaperMc`
+コマンド実行の共通処理。`update`・`upgrade`・`shutdown`・`startPaperMC`・`stopPaperMC`・`startSchubert`・
+`stopSchubert`・`backupPaperMC`・`wgetPaperMc`・`mount`・`umount`
 から呼ばれる（
 `movePaperMc` は内部で直接 `SshExec` を操作するため、このメソッドを経由しない）。
 
@@ -279,32 +269,43 @@ private static void runCommand(ConnectionInformation ci, String cmd)
 3. sshExec.execute() → ret（標準出力の行配列）
 4. log に "$ {cmd}" を追記
 5. log に ret の全要素を追記
+6. ret（String[]）を呼び出し元へ返却
 ```
 
 ---
 
-### `waitForBecomeActive(ConnectionInformation ci)` ※private
+### `waitForBecomeActive(ConnectionInformation ci, int limit)`
 
 ```java
-private static void waitForBecomeActive(ConnectionInformation ci)
-        throws JSchException, InterruptedException;
+public static void waitForBecomeActive(ConnectionInformation ci, int limit)
+        throws JSchException, InterruptedException, IOException;
 ```
 
-対象サーバへのSSH接続が成功するまで1秒間隔でポーリングする。  
-`shutdown` 実行後の再起動待ちで主に使用される。
-
-#### 処理フロー
+`limit` は秒単位で、各呼び出しの開始時刻を `BashExec.getNowTime()` で取得する。
 
 ```
-1. SshExec(ci, CMD_DO_NOTHING) のインスタンスを生成
-2. while (!sshExec.isAlive()):
+1. startUnixTime = BashExec.getNowTime()
+2. SshExec(ci, CMD_DO_NOTHING) を生成
+3. while (!sshExec.isAlive()):
+     startUnixTime + limit < BashExec.getNowTime() なら
+       RuntimeException(OTHER_REBOOT_EXCEPTION % ci.toString())
      Thread.sleep(1000)
-3. isAlive() が true になったらループを抜けてリターン
+4. 接続成功で復帰
 ```
 
-| 使用定数         | 値    | 意味                                    |
-|------------------|-------|-----------------------------------------|
-| `CMD_DO_NOTHING` | `":"` | Bashのno-opコマンド。接続確認のみに使用 |
+再起動後の明示待機では `SERVER_REBOOT_WAIT_LIMIT = 600` 秒を渡す。
+各接続確認は `session.connect(60000)` を使用するが、全体の600秒は厳密な締切ではない。
+失敗した接続試行後に期限超過を確認し、最後の試行で接続成功した場合は期限後でも後続へ進む。
+
+### `waitForBecomeActive(ConnectionInformation ci)`
+
+```java
+public static void waitForBecomeActive(ConnectionInformation ci)
+        throws JSchException, InterruptedException, IOException;
+```
+
+`waitForBecomeActive(ci, Integer.MAX_VALUE)` へ委譲する。
+通常のコマンド実行前および `movePaperMc` から利用する。600秒を適用するのはワークフローの再起動後明示待機である。
 
 ---
 
@@ -331,13 +332,37 @@ public static boolean isAlive(ConnectionInformation ci)
 
 ---
 
+### `mount(ConnectionInformation ci)` / `umount(ConnectionInformation ci)`
+
+```java
+public static void mount(ConnectionInformation ci)
+        throws JSchException, InterruptedException, IOException;
+
+public static void umount(ConnectionInformation ci)
+        throws JSchException, InterruptedException, IOException;
+```
+
+| 工程 | mount                                 | umount                              |
+|------|---------------------------------------|-------------------------------------|
+| 1    | `runCommand(ci, CMD_MOUNT_NAS)`       | `runCommand(ci, CMD_UMOUNT_NAS)`    |
+| 2    | `runCommand(ci, CMD_MOUNT_SHARE)`     | `runCommand(ci, CMD_UMOUNT_SHARE)`  |
+| 3    | `findmnt /nas` に出力がなければ例外   | `findmnt /nas` に出力があれば例外   |
+| 4    | `findmnt /share` に出力がなければ例外 | `findmnt /share` に出力があれば例外 |
+
+状態不一致は `RuntimeException(OTHER_MOUNT_STATUS_EXCEPTION)` とする。
+使用中で解除できない場合も、確認コマンドが正常なら残存マウントを検出して後続を止める。
+アンマウントのリトライ、終了コード取得、共有元の期待値照合は追加しない。
+NAS自身を除外する責務は `WksWorkFlow` にあり、ここでは指定された接続先のみ操作する。
+
+---
+
 ## 設計上の注意点
 
 - バージョンファイルの親ディレクトリの存在、実行ユーザの作成・上書き権限、十分なディスク容量を前提とする。親ディレクトリの自動作成や
   `PrintStream` の書き込み・クローズ時のエラーフラグ確認は行わない。
-- 初期疎通確認によるスキップやファイル出力到達前の例外発生時はバージョンファイルを更新せず、既存ファイルがあれば以前の内容が残る。
+- 初期疎通不可による全体中止やファイル出力到達前の例外発生時はバージョンファイルを更新せず、既存ファイルがあれば以前の内容が残る。
 - `runCommand` はすべてのコマンド実行の前に `waitForBecomeActive` を呼ぶため、サーバが再起動中であっても応答待ちで自動リトライされる。
-- `isAlive` は `WksWorkFlow` の処理開始時疎通確認で使用し、非アクティブサーバをスキップするための判定値を返す。
+- `isAlive` は `WksWorkFlow` の処理開始時疎通確認で使用し、全体の保守開始可否を判断するための判定値を返す。
 - `movePaperMc` におけるPl3xMapの旧ファイル削除（`CMD_PL3XMAP_RM`）は、新バージョンのダウンロード有無に関わらず
   **常に実行**
   される。これにより、バージョン不一致時でも旧ファイルは削除される。

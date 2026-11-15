@@ -2,13 +2,13 @@
 
 ## 基本情報
 
-| 項目       | 内容                                                                     |
-|----------|------------------------------------------------------------------------|
-| 完全修飾クラス名 | `com.wks.util.BashExec`                                                |
-| ファイル名    | `BashExec.java`                                                        |
-| 種別       | class（public）                                                          |
-| 責務       | Java の `ProcessBuilder` を使用してローカルサーバ（自サーバ）上でBashコマンドを実行する。標準出力をログに記録する |
-| 主な依存クラス  | `Main`、`WksConstants`                                                  |
+| 項目             | 内容                                                                                                              |
+|------------------|-------------------------------------------------------------------------------------------------------------------|
+| 完全修飾クラス名 | `com.wks.util.BashExec`                                                                                           |
+| ファイル名       | `BashExec.java`                                                                                                   |
+| 種別             | class（public）                                                                                                   |
+| 責務             | Java の `ProcessBuilder` を使用してローカルサーバ（自サーバ）上でBashコマンドを実行する。標準出力をログに記録する |
+| 主な依存クラス   | `Main`、`WksConstants`                                                                                            |
 
 ---
 
@@ -37,7 +37,20 @@
 
 - `ProcessBuilder` を用いて `sh -c <コマンド>` 形式でローカルBashコマンドを実行する共通処理を持つこと。
 - 実行コマンド文字列（`$ <コマンド>` 形式）をグローバルログへ記録すること。
-- プロセスの標準出力を全行読み取り、グローバルログへ記録すること。
+- プロセスの標準出力を全行読み取り、グローバルログへ記録するとともに `String[]` で返すこと。
+
+### BE-05：管理端末での固定待機
+
+`public static void waitOneMin() throws IOException, InterruptedException`。
+`runCommand(CMD_WAIT_ONE_MIN)` を呼び、管理端末の `sleep 60` を同期待機する。
+両サービス停止後に1回、全台への再起動指示後に1回利用する。接続先でのsleepは行わない。
+
+### BE-06：UNIX時刻取得
+
+`public static long getNowTime() throws IOException, InterruptedException`。
+`runCommand(CMD_GET_TIME)` の先頭行を `Long.parseLong` で変換して返す。
+コマンドは `date '+%s'` で、単位は秒。復帰待ちの開始時刻と現在時刻に使用する。
+先頭行の存在と整数形式を前提とし、不正値なら非検査例外がMainへ伝播する。
 
 ---
 
@@ -45,41 +58,43 @@
 
 ### フィールド
 
-| フィールド名 | 型                   | 修飾子                    | 初期値        | 要件                                  |
-|--------|---------------------|------------------------|------------|-------------------------------------|
-| `log`  | `ArrayList<String>` | `private static final` | `Main.log` | `Main.log` への参照。コマンドと標準出力のログ記録に使用する |
+| フィールド名 | 型                  | 修飾子                 | 初期値     | 要件                                                        |
+|--------------|---------------------|------------------------|------------|-------------------------------------------------------------|
+| `log`        | `ArrayList<String>` | `private static final` | `Main.log` | `Main.log` への参照。コマンドと標準出力のログ記録に使用する |
 
 ### メソッド
 
-| メソッド名        | 戻り値型   | 修飾子              | 要件概要                                         |
-|--------------|--------|------------------|----------------------------------------------|
-| `update`     | `void` | `public static`  | `CMD_UPDATE` を引数に `runCommand` を呼び出すラッパー     |
-| `upgrade`    | `void` | `public static`  | `CMD_UPGRADE` を引数に `runCommand` を呼び出すラッパー    |
-| `shutdown`   | `void` | `public static`  | 60秒遅延バックグラウンド再起動コマンドを起動する。`waitFor()` は不要    |
-| `runCommand` | `void` | `private static` | コマンド実行・出力読み取り・ログ記録の共通処理。`waitFor()` で完了を待機する |
+| メソッド名   | 戻り値型   | 修飾子           | 要件概要                                                                     |
+|--------------|------------|------------------|------------------------------------------------------------------------------|
+| `update`     | `void`     | `public static`  | `CMD_UPDATE` を引数に `runCommand` を呼び出すラッパー                        |
+| `upgrade`    | `void`     | `public static`  | `CMD_UPGRADE` を引数に `runCommand` を呼び出すラッパー                       |
+| `shutdown`   | `void`     | `public static`  | 60秒遅延バックグラウンド再起動コマンドを起動する。`waitFor()` は不要         |
+| `waitOneMin` | `void`     | `public static`  | 管理端末でsleep 60の完了を待つ                                               |
+| `getNowTime` | `long`     | `public static`  | dateの先頭行をUNIX秒として返す                                               |
+| `runCommand` | `String[]` | `private static` | コマンド実行・出力読み取り・ログ記録の共通処理。`waitFor()` で完了を待機する |
 
 ---
 
 ## SshCommand.shutdown() との比較
 
-| 項目     | `SshCommand.shutdown()`   | `BashExec.shutdown()`                  |
-|--------|---------------------------|----------------------------------------|
-| コマンド   | `sudo shutdown -r now`    | `(sleep 60 && sudo shutdown -r now) &` |
-| 実行方式   | SSH / 即時実行                | Bash / バックグラウンド・60秒遅延                  |
-| プロセス待機 | `SshExec.execute()` で完了待ち | `start()` のみ（待機なし）                     |
-| 目的     | リモートサーバの即時再起動             | 自サーバをバッチ終了後に再起動する                      |
+| 項目         | `SshCommand.shutdown()`        | `BashExec.shutdown()`                  |
+|--------------|--------------------------------|----------------------------------------|
+| コマンド     | `sudo shutdown -r now`         | `(sleep 60 && sudo shutdown -r now) &` |
+| 実行方式     | SSH / 即時実行                 | Bash / バックグラウンド・60秒遅延      |
+| プロセス待機 | `SshExec.execute()` で完了待ち | `start()` のみ（待機なし）             |
+| 目的         | リモートサーバの即時再起動     | 自サーバをバッチ終了後に再起動する     |
 
 ---
 
 ## 例外要件
 
-| メソッド名      | 例外クラス                  | 想定発生状況                     |
-|------------|------------------------|----------------------------|
-| `update`   | `IOException`          | プロセス起動失敗・標準出力読み取り失敗        |
-| `update`   | `InterruptedException` | `process.waitFor()` 中の割り込み |
-| `upgrade`  | `IOException`          | プロセス起動失敗・標準出力読み取り失敗        |
-| `upgrade`  | `InterruptedException` | `process.waitFor()` 中の割り込み |
-| `shutdown` | `IOException`          | プロセス起動失敗                   |
+| メソッド名 | 例外クラス             | 想定発生状況                           |
+|------------|------------------------|----------------------------------------|
+| `update`   | `IOException`          | プロセス起動失敗・標準出力読み取り失敗 |
+| `update`   | `InterruptedException` | `process.waitFor()` 中の割り込み       |
+| `upgrade`  | `IOException`          | プロセス起動失敗・標準出力読み取り失敗 |
+| `upgrade`  | `InterruptedException` | `process.waitFor()` 中の割り込み       |
+| `shutdown` | `IOException`          | プロセス起動失敗                       |
 
 ---
 
@@ -90,3 +105,7 @@
 - `SshExec` と異なり実行済みフラグを持たないため、同じコマンドを複数回呼ぶことが可能である。
 - `shutdown()` は `InterruptedException` をスローしないが、`update()` / `upgrade()` はスローすること。
 - 標準出力の読み取りには文字コード UTF-8 を使用すること。
+
+- `runCommand` の戻り値は標準出力の行配列（空出力は長さ0）。実行コマンドと各行は従来どおりログにも記録する。
+- `waitOneMin`・`getNowTime` のプロセス起動・読み取り失敗は `IOException`、完了待ち割り込みは `InterruptedException`
+  として上位へ伝播する。
