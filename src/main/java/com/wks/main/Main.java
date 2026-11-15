@@ -11,7 +11,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * 実行クラス
@@ -20,7 +21,7 @@ public class Main {
     /**
      * ログ
      */
-    public static final ArrayList<String> log = new ArrayList<>();
+    public static final List<String> log = new CopyOnWriteArrayList<>();
 
     /**
      * エントリポイント

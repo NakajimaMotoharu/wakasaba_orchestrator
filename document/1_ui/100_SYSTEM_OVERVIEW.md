@@ -55,17 +55,18 @@ com.wks
 
 ## クラス一覧
 
-| クラス名                | パッケージ         | 種別   | 役割                                                            |
-|-------------------------|--------------------|--------|-----------------------------------------------------------------|
-| `Main`                  | `com.wks.main`     | class  | エントリポイント。引数検証・ワークフロー起動・ログファイル出力  |
-| `WksWorkFlow`           | `com.wks.workflow` | class  | 6台のリモートサーバ＋自サーバへの処理シーケンスを順次実行       |
-| `SshCommand`            | `com.wks.cmd`      | class  | SSH経由コマンド実行の業務ロジックラッパー。サーバ応答待機を含む |
-| `PaperUrlGen`           | `com.wks.papermc`  | class  | PaperMC API・Modrinth API のJSONレスポンス解析                  |
-| `ConnectionInformation` | `com.wks.util`     | record | SSH接続情報（host/port/user/key）の保持とファイル読込み         |
-| `SshExec`               | `com.wks.util`     | class  | JSch を使用した SSH セッション確立・コマンド実行・疎通確認      |
-| `BashExec`              | `com.wks.util`     | class  | ProcessBuilder によるローカル Bash コマンド実行                 |
-| `Curl`                  | `com.wks.util`     | class  | Java 標準 HttpClient による HTTP GET リクエスト                 |
-| `WksConstants`          | `com.wks.parts`    | class  | アプリケーション全体で使用する定数の一元管理                    |
+| クラス名                | パッケージ         | 種別                                 | 役割                                                            |
+|-------------------------|--------------------|--------------------------------------|-----------------------------------------------------------------|
+| `Main`                  | `com.wks.main`     | class                                | エントリポイント。引数検証・ワークフロー起動・ログファイル出力  |
+| `WksWorkFlow`           | `com.wks.workflow` | class                                | 6台のリモートサーバ＋自サーバへの処理シーケンスを順次実行       |
+| `UpdateThread`          | `com.wks.workflow` | class（package-private、Thread継承） | WksWorkFlow.java内。サーバ1台のupdate・upgradeと例外保持        |
+| `SshCommand`            | `com.wks.cmd`      | class                                | SSH経由コマンド実行の業務ロジックラッパー。サーバ応答待機を含む |
+| `PaperUrlGen`           | `com.wks.papermc`  | class                                | PaperMC API・Modrinth API のJSONレスポンス解析                  |
+| `ConnectionInformation` | `com.wks.util`     | record                               | SSH接続情報（host/port/user/key）の保持とファイル読込み         |
+| `SshExec`               | `com.wks.util`     | class                                | JSch を使用した SSH セッション確立・コマンド実行・疎通確認      |
+| `BashExec`              | `com.wks.util`     | class                                | ProcessBuilder によるローカル Bash コマンド実行                 |
+| `Curl`                  | `com.wks.util`     | class                                | Java 標準 HttpClient による HTTP GET リクエスト                 |
+| `WksConstants`          | `com.wks.parts`    | class                                | アプリケーション全体で使用する定数の一元管理                    |
 
 ---
 
@@ -74,6 +75,8 @@ com.wks
 ```
 Main
 ├── WksWorkFlow
+│   ├── UpdateThread（WksWorkFlow.java内）
+│   │   └── SshCommand
 │   ├── SshCommand
 │   │   ├── SshExec
 │   │   │   └── ConnectionInformation
@@ -90,7 +93,7 @@ Main
 └── WksConstants
 ```
 
-- `Main.log`（`public static final ArrayList<String>`）を起点として、全クラスが同一ログリストを共有参照する。
+- `Main.log`（`public static final List<String>`）を起点として、全クラスが同一ログリストを共有参照する。
 
 ---
 
@@ -115,7 +118,8 @@ Mainで6引数を検証し、開始ログを記録して次のワークフロー
    最初の疎通不可 → WARNING: Servers Not Active → 保守せずMainへ復帰
 3. systemStop(cis): PaperMC停止 → Schubert停止 → 管理端末で60秒待機（1回）
 4. allUMount(cis): サーバ0～4の /nas・/share を解除し、findmntの出力がないことを確認
-5. allUpdate(cis): サーバ0～5で1台ずつ update → upgrade
+5. allUpdate(cis): サーバ0～5を並列更新（各台 update → upgrade）
+   全スレッドのjoin → 引数順の例外検出 → 全件正常なら次工程へ
 6. allReboot(cis): サーバ0～5へ順に再起動指示
 7. BashExec.waitOneMin(): 管理端末で60秒待機（1回）
 8. allRebootComplete(cis): サーバ0～5を順に確認（各呼び出し600秒目安）
@@ -138,7 +142,7 @@ Mainで6引数を検証し、開始ログを記録して次のワークフロー
 | 5            | `SERVER_NAS`      | NAS              | OS更新・再起動。自身への共有操作は行わない                         |
 | 管理端末     | -                 | 本バッチ実行端末 | 固定待機・時刻取得、最後にOS更新・60秒遅延再起動                   |
 
-- 全台メンテナンスは工程単位の直列処理であり、並列実行ではない。
+- 工程の順序は維持し、OS更新工程のみサーバ間を並列化する。共有操作・再起動・復帰確認・アプリ操作は従来どおり直列とする。
 - 全機疎通確認はサービス停止前に行い、最初の失敗で中止する。管理端末のOS更新も開始しない。
 - 初期疎通確認前に `Checking Connection: %s`（host・port・user）を記録する。リモート各台の `LOG_SPLIT`
   は記録せず、管理端末の区切りのみ維持する。
@@ -157,12 +161,20 @@ Mainで6引数を検証し、開始ログを記録して次のワークフロー
 
 ## 例外ハンドリング方針
 
+- 更新スレッド内の例外は保存し、全スレッドの終了待ち後に親スレッドで引数順に検出する。
+- `JSchException`・`IOException`・`InterruptedException` は同じ例外を再送出し、その他の `Exception` は原因を保持した
+  `RuntimeException` で再送出する。
+- 親スレッドで例外を再送出した場合は、再起動以降を実行せず、従来どおりMainでログ出力して手動復旧する。
+- 更新失敗時もほかの開始済みタスクはキャンセルせず、終了を待つ。複数の失敗は集約せず、引数順で最初に検出した例外を再送出する。
+
 - 各クラスの業務メソッドは検査例外を `throws` で `Main.main` まで委譲する。個別の回復処理は行わない。
 - `Main.main` はワークフロー実行中の `Exception` を捕捉し、スタックトレースをログへ追記した後、終了時刻記録とログファイル出力へ進む。
 - `Main.outLog` が送出する `IOException` は捕捉せずJVMへ伝播する。
 - PaperMCの正式版未検出時は `RuntimeException`、バージョンファイルのオープン失敗時は `FileNotFoundException`（
   `IOException`）が発生し、ワークフローの後続処理を中断して `Main.main` でログへ記録する。
-- `SshExec.isAlive()` 内部のみ例外を吸収する。`session.connect(60000)` が投げるすべての `JSchException` を `false`
+- `UpdateThread` は例外を一時保持し、全スレッド終了後に親へ再送出する。例外を回復扱いにはしない。
+- `SshExec.isAlive()` は接続失敗を疎通不可として扱うため例外を吸収する。`session.connect(60000)` が投げるすべての
+  `JSchException` を `false`
   として返す。処理開始時疎通確認では全体の保守開始可否の判定に使用し、再起動待ちではポーリング継続判定に使用する。
 
 | 例外クラス                            | 主な発生状況                                                                                        |
@@ -177,8 +189,11 @@ Mainで6引数を検証し、開始ログを記録して次のワークフロー
 
 ## ログ設計
 
-- `Main.log`（`public static final ArrayList<String>`）を全クラス共通のグローバルログバッファとして使用する。
-- 各クラスは `Main.log` への参照を `private static final ArrayList<String> log = Main.log` として保持し、実行中に随時追記する。
+- 共有ログの宣言型は `List<String>`、実体は `Main` が生成する `CopyOnWriteArrayList<String>` とする。各クラスは同一インスタンスを参照する。
+- 並列更新中の `add`・`addAll` は安全に実行できるが、コマンド行と標準出力を一体で排他しないため、サーバ間のログは混在する。サーバ別の順序・まとまりは保証しない。
+
+- `Main.log`（`public static final List<String>`）を全クラス共通のグローバルログバッファとして使用する。
+- 各クラスは `Main.log` への参照を `private static final List<String> log = Main.log` として保持し、実行中に随時追記する。
 - ワークフローの正常・異常終了後、`Main.outLog()` が `log` の全行をファイルへ書き出す。
 - ログファイルのパスは `WksConstants.PATH_EXEC_LOG`（`/home/mini/wakasaba_orchestrator/log/log_%s.txt`
   ）に終了時刻タイムスタンプを埋め込んだ値となる。
