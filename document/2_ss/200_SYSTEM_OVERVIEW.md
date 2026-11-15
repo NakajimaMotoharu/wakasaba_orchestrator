@@ -25,7 +25,7 @@
 ### 実行コマンド例
 
 ```bash
-java -jar wakasaba_orchestrator-1.0-SNAPSHOT-all.jar <server0_file> <server1_file> <server2_file> <server3_file> <server4_file>
+java -jar wakasaba_orchestrator-1.0-SNAPSHOT-all.jar <server0_file> <server1_file> <server2_file> <server3_file> <server4_file> <server5_file>
 ```
 
 各引数はサーバ接続情報ファイルのパスを示す。ファイルフォーマットについては [補足資料：接続情報ファイル仕様](./290_SERVER_FILE_SPEC)
@@ -61,7 +61,7 @@ com.wks
 | クラス名                                             | パッケージ         | 種別   | 役割                                                   |
 |------------------------------------------------------|--------------------|--------|--------------------------------------------------------|
 | [Main](./201_Main)                                   | `com.wks.main`     | class  | エントリポイント。引数検証・ログ管理・ログファイル出力 |
-| [WksWorkFlow](./202_WksWorkFlow)                     | `com.wks.workflow` | class  | 5台のリモートサーバ＋自サーバへの処理シーケンス定義    |
+| [WksWorkFlow](./202_WksWorkFlow)                     | `com.wks.workflow` | class  | 6台のリモートサーバ＋自サーバへの処理シーケンス定義    |
 | [SshCommand](./203_SshCommand)                       | `com.wks.cmd`      | class  | SSH経由コマンド実行の業務ロジックラッパー              |
 | [PaperUrlGen](./204_PaperUrlGen)                     | `com.wks.papermc`  | class  | PaperMC・Pl3xMap APIレスポンスJSONパーサ               |
 | [ConnectionInformation](./205_ConnectionInformation) | `com.wks.util`     | record | サーバ接続情報（host/port/user/key）の保持と読込み     |
@@ -87,65 +87,51 @@ com.wks
 
 ## 処理フロー概要
 
+Mainで6引数を検証し、開始ログを記録して次のワークフローを呼び出す。
+
 ```
-main(args)
-│
-├─ [引数チェック] args.length == 5 ?
-│     No  → USAGEメッセージ出力して終了
-│     Yes ↓
-│
-├─ ログ: 開始時刻記録
-│
-├─ try: WksWorkFlow.execScheduledJob(args)
-│   │
-│   ├─ [サーバ0] 接続情報読込み
-│   │   ├─ isAlive? No → WARNING: Server Not Active をログへ追記して次サーバへ
-│   │   ├─ update
-│   │   ├─ upgrade
-│   │   └─ shutdown (reboot)
-│   │
-│   ├─ [サーバ1] 接続情報読込み  ← PaperMCサーバ
-│   │   ├─ isAlive? No → WARNING: Server Not Active をログへ追記して次サーバへ
-│   │   ├─ stopPaperMC
-│   │   ├─ waitOneMin           ← sleep 60による安全停止待機
-│   │   ├─ update
-│   │   ├─ upgrade
-│   │   ├─ backupPaperMC
-│   │   ├─ wgetPaperMc          ← PaperMC正式版選択・Pl3xMapダウンロード・管理端末へバージョンファイル出力
-│   │   ├─ movePaperMc          ← SHA256/SHA512検証 → ファイル配置
-│   │   ├─ shutdown (reboot)
-│   │   └─ startPaperMC
-│   │
-│   ├─ [サーバ2] 接続情報読込み
-│   │   ├─ isAlive? No → WARNING: Server Not Active をログへ追記して次サーバへ
-│   │   ├─ update
-│   │   ├─ upgrade
-│   │   └─ shutdown (reboot)
-│   │
-│   ├─ [サーバ3] 接続情報読込み  ← Schubertサーバ
-│   │   ├─ isAlive? No → WARNING: Server Not Active をログへ追記してサーバ4へ
-│   │   ├─ stopSchubert
-│   │   ├─ waitOneMin           ← sleep 60による安全停止待機
-│   │   ├─ update
-│   │   ├─ upgrade
-│   │   ├─ shutdown (reboot)
-│   │   └─ startSchubert
-│   │
-│   ├─ [サーバ4] 接続情報読込み  ← VPNサーバ
-│   │   ├─ isAlive? No → WARNING: Server Not Active をログへ追記して自サーバへ
-│   │   ├─ update
-│   │   ├─ upgrade
-│   │   └─ shutdown (reboot)
-│   │
-│   └─ [自サーバ] BashExec経由で実行
-│       ├─ update
-│       ├─ upgrade
-│       └─ shutdown (60秒後 reboot, バックグラウンド)
-│
-├─ catch (Exception): スタックトレースをログへ追記
-├─ ログ: 終了時刻記録
-└─ ログファイル出力 (log_yyyyMMddHHmmss.txt)
+1. setConnectionInformation(servers): 6ファイルを読み込み cis[0]～cis[5] を設定
+2. isAllAlive(cis): 引数順に確認前ログを追記しSSH疎通確認
+   最初の疎通不可 → WARNING: Servers Not Active → 保守せずMainへ復帰
+3. systemStop(cis): PaperMC停止 → Schubert停止 → 管理端末で60秒待機（1回）
+4. allUMount(cis): サーバ0～4の /nas・/share を解除し、findmntの出力がないことを確認
+5. allUpdate(cis): サーバ0～5で1台ずつ update → upgrade
+6. allReboot(cis): サーバ0～5へ順に再起動指示
+7. BashExec.waitOneMin(): 管理端末で60秒待機（1回）
+8. allRebootComplete(cis): サーバ0～5を順に確認（各呼び出し600秒目安）
+9. allMount(cis): サーバ0～4の /nas・/share を接続し、findmntの出力があることを確認
+10. systemPreSetup(cis): サーバ1でバックアップ → PaperMC/Pl3xMap取得 → SHA検証・配置
+    wgetPaperMcの末尾で、管理端末のpapermc_version.txtを更新
+11. systemStart(cis): PaperMC起動 → Schubert起動
+12. 管理端末: 区切りログ → BashExec.update() → upgrade() → shutdown()
+13. Mainで終了時刻記録・ログファイル出力
+例外発生: 後続工程中止 → Mainでスタックトレース・終了ログ出力 → 手動復旧
 ```
+
+| インデックス | 定数              | 役割             | 保守対象                                                           |
+|--------------|-------------------|------------------|--------------------------------------------------------------------|
+| 0            | `SERVER_TEST`     | テスト           | OS更新・再起動・共有解除と復旧                                     |
+| 1            | `SERVER_PAPER`    | PaperMC          | OS更新・再起動・共有解除と復旧・PaperMC停止/バックアップ/更新/起動 |
+| 2            | `SERVER_LLM`      | ローカルLLM      | OS更新・再起動・共有解除と復旧                                     |
+| 3            | `SERVER_SCHUBERT` | Schubert         | OS更新・再起動・共有解除と復旧・Schubert停止/起動                  |
+| 4            | `SERVER_VPN`      | VPN              | OS更新・再起動・共有解除と復旧                                     |
+| 5            | `SERVER_NAS`      | NAS              | OS更新・再起動。自身への共有操作は行わない                         |
+| 管理端末     | -                 | 本バッチ実行端末 | 固定待機・時刻取得、最後にOS更新・60秒遅延再起動                   |
+
+- 全台メンテナンスは工程単位の直列処理であり、並列実行ではない。
+- 全機疎通確認はサービス停止前に行い、最初の失敗で中止する。管理端末のOS更新も開始しない。
+- 初期疎通確認前に `Checking Connection: %s`（host・port・user）を記録する。リモート各台の `LOG_SPLIT`
+  は記録せず、管理端末の区切りのみ維持する。
+- NAS以外のリモート5台には `/nas`・`/share` の設定、`findmnt` と必要な権限があることを前提とする。管理端末は共有操作対象外。
+- 両サービス停止後の固定待機は管理端末で1回60秒のみ。停止状態の動的確認は行わない。
+- 全台再起動指示後も管理端末で1回60秒待機し、その後SSH復帰を待つ。boot_idは確認しない。
+- 復帰待ちはサーバごとに `SERVER_REBOOT_WAIT_LIMIT = 600` 秒を指定する。失敗した試行後に期限超過を確認し、最後の試行が成功すれば期限後でも続行する。厳密な600秒の締切ではない。
+- SSH疎通確認は `session.connect(60000)` を使用する。通常のコマンド実行前の1引数版待機は `Integer.MAX_VALUE`
+  秒を指定するため、再起動後の明示待機とは異なる。
+- バックアップ・ダウンロード・配置は全台復帰と全共有再マウント後。バージョンファイルの内容・出力端末・SHA検証前の出力仕様はNo.307・308から変更しない。
+- マウント有無は `findmnt` の標準出力の有無で判定する。状態不一致は実行時例外。共有元照合、確認コマンド自体の失敗検知、解除リトライは追加しない。
+- 例外時は残りの工程を打ち切り、サービスの自動復旧やロールバックは行わない。PaperMC処理の例外でもSchubertを起動せず、手動復旧する。
+- 自サーバの再起動は従来どおり60秒遅延バックグラウンド実行。
 
 ---
 
@@ -159,7 +145,7 @@ main(args)
 両パスは `PATH_WAKASABA_EXEC`（`/home/mini/wakasaba_orchestrator/`）との定数連結で構成する。
 バージョンファイルは `PrintStream(String)` の既定文字コードで、`print(version)` により末尾改行なしで新規作成または上書きする。
 Pl3xMapをバージョン不一致でスキップした場合も出力するが、SHA検証・本番配置前のため本番配置・起動完了を示さない。
-初期疎通確認によるスキップや出力到達前の例外発生時は更新せず、既存内容が残る。
+初期疎通不可による全体中止や出力到達前の例外発生時は更新せず、既存内容が残る。
 出力先ディレクトリの存在、作成・上書き権限、十分なディスク容量を前提とし、親ディレクトリの自動作成や書き込み・クローズ時のエラーフラグ確認は行わない。
 
 ---

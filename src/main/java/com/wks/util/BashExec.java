@@ -62,12 +62,33 @@ public class BashExec {
     }
 
     /**
+     * 1分間待機するコマンドの実行
+     *
+     * @throws IOException シェルコマンド実行失敗時
+     * @throws InterruptedException シェルコマンド実行失敗時
+     */
+    public static void waitOneMin() throws IOException, InterruptedException {
+        runCommand(WksConstants.CMD_WAIT_ONE_MIN);
+    }
+
+    /**
+     * 現在のUNIX時間を取得
+     *
+     * @return UNIX時間
+     * @throws IOException シェルコマンド実行失敗時
+     * @throws InterruptedException シェルコマンド実行失敗時
+     */
+    public static long getNowTime() throws IOException, InterruptedException {
+        return Long.parseLong(runCommand(WksConstants.CMD_GET_TIME)[0]);
+    }
+
+    /**
      * 任意のコマンド実行
      *
      * @throws IOException          シェルコマンド実行失敗時
      * @throws InterruptedException シェルコマンド実行失敗時
      */
-    private static void runCommand(String cmd) throws IOException, InterruptedException {
+    private static String[] runCommand(String cmd) throws IOException, InterruptedException {
         // ProcessBuilderを指定のコマンドで作成
         ProcessBuilder processBuilder =
                 new ProcessBuilder(WksConstants.CMD_SHELL_HEAD, WksConstants.CMD_SHELL_OPTION, cmd);
@@ -84,6 +105,9 @@ public class BashExec {
         // 実行コマンドをログに追加
         log.add(String.format(WksConstants.LOG_COMMAND, cmd));
 
+        // 出力格納用リスト作成
+        ArrayList<String> retList = new ArrayList<>();
+
         // 出力を1行ずつlogに追加
         while (true) {
             // 1行読み取り
@@ -95,11 +119,23 @@ public class BashExec {
             }
             // logに追加
             log.add(line);
+            // 出力リストに追加
+            retList.add(line);
         }
 
         // bufferedReaderをクローズ
         bufferedReader.close();
         // inputStreamReaderをクローズ
         inputStreamReader.close();
+
+        // 出力用配列を作成
+        String[] ret = new String[retList.size()];
+        // 全出力に対してループ
+        for (int i = 0; i < ret.length; i++){
+            // 出力用配列にリストの各要素を格納
+            ret[i] = retList.get(i);
+        }
+
+        return ret;
     }
 }

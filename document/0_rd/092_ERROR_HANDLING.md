@@ -19,30 +19,45 @@
 
 ### 検査例外（Checked Exception）
 
-| 例外クラス                               | 主な発生箇所                          | 原因                                                                                                    |
-|------------------------------------------|---------------------------------------|---------------------------------------------------------------------------------------------------------|
-| `FileNotFoundException`（`IOException`） | `SshCommand.wgetPaperMc`              | 管理端末上のPaperMCバージョンファイルのオープン失敗                                                     |
-| `IOException`                            | `ConnectionInformation.getCiFromFile` | 接続情報ファイルの読み込み失敗                                                                          |
-| `IOException`                            | `SshExec.execute`                     | SSH標準出力の読み取り失敗                                                                               |
-| `IOException`                            | `BashExec.runCommand`                 | ローカルプロセスの起動・出力読み取り失敗                                                                |
-| `IOException`                            | `Curl.exec`                           | HTTPリクエストのネットワーク障害                                                                        |
-| `IOException`                            | `Main.outLog`                         | ログファイルへの書き込み失敗・出力先ディレクトリ不在またはファイル生成失敗                              |
-| `InterruptedException`                   | `SshExec.execute`                     | SSH待機中の割り込み                                                                                     |
-| `InterruptedException`                   | `SshCommand.waitForBecomeActive`      | ポーリングスリープ中の割り込み                                                                          |
-| `InterruptedException`                   | `BashExec.runCommand`                 | `process.waitFor()` 中の割り込み                                                                        |
-| `InterruptedException`                   | `Curl.exec`                           | HTTPリクエスト待機中の割り込み                                                                          |
-| `JSchException`                          | `SshExec.isAlive`                     | SSHセッション生成エラー。`session.connect()` が投げるすべての `JSchException` を吸収して `false` を返す |
-| `JSchException`                          | `SshExec.execute`                     | SSH接続・チャンネル接続失敗                                                                             |
+| 例外クラス                               | 主な発生箇所                          | 原因                                                                                                         |
+|------------------------------------------|---------------------------------------|--------------------------------------------------------------------------------------------------------------|
+| `FileNotFoundException`（`IOException`） | `SshCommand.wgetPaperMc`              | 管理端末上のPaperMCバージョンファイルのオープン失敗                                                          |
+| `IOException`                            | `ConnectionInformation.getCiFromFile` | 接続情報ファイルの読み込み失敗                                                                               |
+| `IOException`                            | `SshExec.execute`                     | SSH標準出力の読み取り失敗                                                                                    |
+| `IOException`                            | `BashExec.runCommand`                 | ローカルプロセスの起動・出力読み取り失敗                                                                     |
+| `IOException`                            | `Curl.exec`                           | HTTPリクエストのネットワーク障害                                                                             |
+| `IOException`                            | `Main.outLog`                         | ログファイルへの書き込み失敗・出力先ディレクトリ不在またはファイル生成失敗                                   |
+| `InterruptedException`                   | `SshExec.execute`                     | SSH待機中の割り込み                                                                                          |
+| `InterruptedException`                   | `SshCommand.waitForBecomeActive`      | ポーリングスリープ中の割り込み                                                                               |
+| `InterruptedException`                   | `BashExec.runCommand`                 | `process.waitFor()` 中の割り込み                                                                             |
+| `InterruptedException`                   | `Curl.exec`                           | HTTPリクエスト待機中の割り込み                                                                               |
+| `JSchException`                          | `SshExec.isAlive`                     | SSHセッション生成エラー。`session.connect(60000)` が投げるすべての `JSchException` を吸収して `false` を返す |
+| `JSchException`                          | `SshExec.execute`                     | SSH接続・チャンネル接続失敗                                                                                  |
 
 ### 非検査例外（Unchecked Exception）
 
 | 例外クラス                   | 主な発生箇所                          | 原因                                           |
 |------------------------------|---------------------------------------|------------------------------------------------|
 | `RuntimeException`           | `PaperUrlGen.getPaperMcVersion`       | 全系列に正式版が見つからない（空の一覧を含む） |
+| `RuntimeException`           | `SshCommand.mount` / `umount`         | マウント有無が期待状態と不一致                 |
+| `RuntimeException`           | `SshCommand.waitForBecomeActive`      | 失敗したSSH接続試行後、指定秒数の経過を検出    |
+| `NumberFormatException`      | `BashExec.getNowTime`                 | UNIX時刻の先頭行をlongに変換できない           |
 | `NumberFormatException`      | `ConnectionInformation.getCiFromFile` | 接続情報ファイルの2行目が整数値でない          |
 | `IndexOutOfBoundsException`  | `ConnectionInformation.getCiFromFile` | 接続情報ファイルが4行未満                      |
 | `JacksonException`（非検査） | `PaperUrlGen` 全メソッド              | JSONパース失敗（APIレスポンス形式の変更等）    |
 | `NullPointerException`       | `PaperUrlGen` 全メソッド              | JSONのキーが存在しない場合                     |
+
+---
+
+## 異常時運用（No.309）
+
+- 初期疎通不可は例外とせず、最初の失敗対象のログと `WARNING: Servers Not Active` を残して保守せず復帰する。
+- アンマウント後に `findmnt` 出力が残る場合、マウント後に出力がない場合は `OTHER_MOUNT_STATUS_EXCEPTION` で中止する。
+- 再起動後は各サーバ600秒目安でSSH復帰を待ち、失敗した接続試行後に期限超過なら `OTHER_REBOOT_EXCEPTION`
+  に対象接続情報を埋めて中止する。最後の試行で成功した場合は続行する。
+- 時刻取得・待機で発生した `IOException`・`InterruptedException` もMainへ伝播する。
+- 例外発生時は後続工程を実行しない。PaperMC固有の例外でもSchubertを起動しない。自動復旧・ロールバックは行わず、ログを確認して手動復旧する。
+- `SshExec.execute()` の終了コード取得は追加しない。
 
 ---
 
@@ -76,7 +91,7 @@ Main.outLog の IOException
 ## 特例：`SshExec.isAlive()` の例外吸収
 
 `SshCommand.waitForBecomeActive()` → `SshExec.isAlive()` の流れにおいて、  
-`session.connect()` が投げるすべての `JSchException` は `isAlive()` 内で `false` として吸収すること。
+`session.connect(60000)` が投げるすべての `JSchException` は `isAlive()` 内で `false` として吸収すること。
 
 これにより `shutdown` 後の再起動待ちがポーリングで実現される。  
 なお、`getSessionInstance()` 内での `JSchException`（秘密鍵読込失敗等）は吸収せず上位に伝播させること。
@@ -89,7 +104,7 @@ Main.outLog の IOException
 
 | 状況                                         | 結果                                                                                 |
 |----------------------------------------------|--------------------------------------------------------------------------------------|
-| `main` に渡す引数が5つでない                 | 標準出力にUSAGEメッセージを表示して終了。ログファイルは生成されない                  |
+| `main` に渡す引数が6つでない                 | 標準出力にUSAGEメッセージを表示して終了。ログファイルは生成されない                  |
 | ワークフロー処理途中で例外が発生             | スタックトレースと終了時刻を追記し、途中までの実行ログとともにログファイルへ出力する |
 | ログファイルの出力先ディレクトリが存在しない | `IOException` が発生してJVMが終了                                                    |
 
@@ -99,6 +114,5 @@ Main.outLog の IOException
 
 本要件では以下は対象外とするが、将来の改善候補として記録する。
 
-- 各処理ステップを `try-catch` で囲み、一部サーバの失敗時に残りのサーバ処理を継続する設計にすることで可用性が向上する。
 - `PaperUrlGen` の `JacksonException` / `NullPointerException` に対する明示的なハンドリングを追加することで、APIレスポンス変更時のデバッグが容易になる。
 - `Curl.exec` におけるHTTPステータスコードの検証を追加することで、APIエラー時の原因特定が容易になる。

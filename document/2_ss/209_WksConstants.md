@@ -14,6 +14,17 @@
 
 ## 定数一覧
 
+### サーバ定数
+
+| 定数名            | 型    | 値  | 説明                          |
+|-------------------|-------|-----|-------------------------------|
+| `SERVER_TEST`     | `int` | `0` | テストサーバ                  |
+| `SERVER_PAPER`    | `int` | `1` | PaperMCサーバ                 |
+| `SERVER_LLM`      | `int` | `2` | ローカルLLMサーバ             |
+| `SERVER_SCHUBERT` | `int` | `3` | Schubertサーバ                |
+| `SERVER_VPN`      | `int` | `4` | VPNサーバ                     |
+| `SERVER_NAS`      | `int` | `5` | NASサーバ（共有操作から除外） |
+
 ### ファイルパス系
 
 | 定数名                           | 型       | 値                                           | 説明                                                |
@@ -32,29 +43,36 @@
 
 ### Linuxコマンド系
 
-| 定数名               | 型       | 値                                                                             | 説明                                                        |
-|----------------------|----------|--------------------------------------------------------------------------------|-------------------------------------------------------------|
-| `CMD_UPDATE`         | `String` | `"sudo apt update"`                                                            | パッケージリスト更新コマンド                                |
-| `CMD_UPGRADE`        | `String` | `"sudo apt upgrade -y"`                                                        | パッケージアップグレードコマンド（自動承認）                |
-| `CMD_SHUTDOWN`       | `String` | `"sudo shutdown -r now"`                                                       | 即時再起動コマンド                                          |
-| `CMD_WGET_PAPERMC`   | `String` | `"wget -O /home/mini/download/paper.jar --user-agent=\"%s\" %s"`               | PaperMCダウンロードコマンド。`%s` にUA文字列・URLを埋め込む |
-| `CMD_WGET_PL3XMAP`   | `String` | `"wget -O /home/mini/download/pl3xmap.jar --user-agent=\"%s\" %s"`             | Pl3xMapダウンロードコマンド。`%s` にUA文字列・URLを埋め込む |
-| `CMD_PAPERMC_HASH`   | `String` | `"sha256sum /home/mini/download/paper.jar"`                                    | PaperMC JARのSHA256ハッシュ取得コマンド                     |
-| `CMD_PAPERMC_RM`     | `String` | `"rm /home/mini/mcs/prod/paper.jar"`                                           | 本番PaperMC JAR削除コマンド                                 |
-| `CMD_PAPERMC_MV`     | `String` | `"mv /home/mini/download/paper.jar /home/mini/mcs/prod/paper.jar"`             | PaperMC JARを本番へ移動するコマンド                         |
-| `CMD_PL3XMAP_HASH`   | `String` | `"sha512sum /home/mini/download/pl3xmap.jar"`                                  | Pl3xMap JARのSHA512ハッシュ取得コマンド                     |
-| `CMD_PL3XMAP_RM`     | `String` | `"rm /home/mini/mcs/prod/plugins/pl3xmap.jar"`                                 | 本番Pl3xMap JAR削除コマンド                                 |
-| `CMD_PL3XMAP_MV`     | `String` | `"mv /home/mini/download/pl3xmap.jar /home/mini/mcs/prod/plugins/pl3xmap.jar"` | Pl3xMap JARを本番へ移動するコマンド                         |
-| `CMD_PAPERMC_START`  | `String` | `"sudo systemctl start papermc"`                                               | PaperMCサービス起動コマンド                                 |
-| `CMD_PAPERMC_END`    | `String` | `"sudo systemctl stop papermc"`                                                | PaperMCサービス停止コマンド                                 |
-| `CMD_PAPERMC_BACKUP` | `String` | `"sh /home/mini/mcs/shell/backup.sh"`                                          | バックアップシェル実行コマンド                              |
-| `CMD_SCHUBERT_START` | `String` | `"sh /home/mini/schubert/start_schubert.sh"`                                   | Schubert起動コマンド                                        |
-| `CMD_SCHUBERT_END`   | `String` | `"sh /home/mini/schubert/stop_schubert.sh"`                                    | Schubert停止コマンド                                        |
-| `CMD_DO_NOTHING`     | `String` | `":"`                                                                          | Bashのno-opコマンド。SSH疎通確認用                          |
-| `CMD_WAIT_ONE_MIN`   | `String` | `"sleep 60"`                                                                   | 固定60秒待機コマンド                                        |
-| `CMD_SLEEP_SHUTDOWN` | `String` | `"(sleep 60 && sudo shutdown -r now) &"`                                       | 60秒後にバックグラウンドで再起動するコマンド                |
-| `CMD_SHELL_HEAD`     | `String` | `"sh"`                                                                         | シェル実行コマンド（ProcessBuilder用）                      |
-| `CMD_SHELL_OPTION`   | `String` | `"-c"`                                                                         | シェル実行オプション（ProcessBuilder用）                    |
+| 定数名                   | 型       | 値                                                                             | 説明                                                        |
+|--------------------------|----------|--------------------------------------------------------------------------------|-------------------------------------------------------------|
+| `CMD_UPDATE`             | `String` | `"sudo apt update"`                                                            | パッケージリスト更新コマンド                                |
+| `CMD_UPGRADE`            | `String` | `"sudo apt upgrade -y"`                                                        | パッケージアップグレードコマンド（自動承認）                |
+| `CMD_SHUTDOWN`           | `String` | `"sudo shutdown -r now"`                                                       | 即時再起動コマンド                                          |
+| `CMD_WGET_PAPERMC`       | `String` | `"wget -O /home/mini/download/paper.jar --user-agent=\"%s\" %s"`               | PaperMCダウンロードコマンド。`%s` にUA文字列・URLを埋め込む |
+| `CMD_WGET_PL3XMAP`       | `String` | `"wget -O /home/mini/download/pl3xmap.jar --user-agent=\"%s\" %s"`             | Pl3xMapダウンロードコマンド。`%s` にUA文字列・URLを埋め込む |
+| `CMD_PAPERMC_HASH`       | `String` | `"sha256sum /home/mini/download/paper.jar"`                                    | PaperMC JARのSHA256ハッシュ取得コマンド                     |
+| `CMD_PAPERMC_RM`         | `String` | `"rm /home/mini/mcs/prod/paper.jar"`                                           | 本番PaperMC JAR削除コマンド                                 |
+| `CMD_PAPERMC_MV`         | `String` | `"mv /home/mini/download/paper.jar /home/mini/mcs/prod/paper.jar"`             | PaperMC JARを本番へ移動するコマンド                         |
+| `CMD_PL3XMAP_HASH`       | `String` | `"sha512sum /home/mini/download/pl3xmap.jar"`                                  | Pl3xMap JARのSHA512ハッシュ取得コマンド                     |
+| `CMD_PL3XMAP_RM`         | `String` | `"rm /home/mini/mcs/prod/plugins/pl3xmap.jar"`                                 | 本番Pl3xMap JAR削除コマンド                                 |
+| `CMD_PL3XMAP_MV`         | `String` | `"mv /home/mini/download/pl3xmap.jar /home/mini/mcs/prod/plugins/pl3xmap.jar"` | Pl3xMap JARを本番へ移動するコマンド                         |
+| `CMD_PAPERMC_START`      | `String` | `"sudo systemctl start papermc"`                                               | PaperMCサービス起動コマンド                                 |
+| `CMD_PAPERMC_END`        | `String` | `"sudo systemctl stop papermc"`                                                | PaperMCサービス停止コマンド                                 |
+| `CMD_PAPERMC_BACKUP`     | `String` | `"sh /home/mini/mcs/shell/backup.sh"`                                          | バックアップシェル実行コマンド                              |
+| `CMD_SCHUBERT_START`     | `String` | `"sh /home/mini/schubert/start_schubert.sh"`                                   | Schubert起動コマンド                                        |
+| `CMD_SCHUBERT_END`       | `String` | `"sh /home/mini/schubert/stop_schubert.sh"`                                    | Schubert停止コマンド                                        |
+| `CMD_DO_NOTHING`         | `String` | `":"`                                                                          | Bashのno-opコマンド。SSH疎通確認用                          |
+| `CMD_WAIT_ONE_MIN`       | `String` | `"sleep 60"`                                                                   | 管理端末での固定60秒待機コマンド                            |
+| `CMD_SLEEP_SHUTDOWN`     | `String` | `"(sleep 60 && sudo shutdown -r now) &"`                                       | 60秒後にバックグラウンドで再起動するコマンド                |
+| `CMD_SHELL_HEAD`         | `String` | `"sh"`                                                                         | シェル実行コマンド（ProcessBuilder用）                      |
+| `CMD_SHELL_OPTION`       | `String` | `"-c"`                                                                         | シェル実行オプション（ProcessBuilder用）                    |
+| `CMD_MOUNT_NAS`          | `String` | `sudo mount /nas`                                                              | NAS共有接続                                                 |
+| `CMD_UMOUNT_NAS`         | `String` | `sudo umount /nas`                                                             | NAS共有解除                                                 |
+| `CMD_MOUNT_STATUS_NAS`   | `String` | `findmnt /nas`                                                                 | NASマウント有無確認                                         |
+| `CMD_MOUNT_SHARE`        | `String` | `sudo mount /share`                                                            | SHARE共有接続                                               |
+| `CMD_UMOUNT_SHARE`       | `String` | `sudo umount /share`                                                           | SHARE共有解除                                               |
+| `CMD_MOUNT_STATUS_SHARE` | `String` | `findmnt /share`                                                               | SHAREマウント有無確認                                       |
+| `CMD_GET_TIME`           | `String` | `date '+%s'`                                                                   | 管理端末のUNIX時刻（秒）取得                                |
 
 ### ログメッセージ系
 
@@ -96,18 +114,22 @@
 
 ### その他
 
-| 定数名                      | 型       | 値                                            | 説明                                           |
-|-----------------------------|----------|-----------------------------------------------|------------------------------------------------|
-| `OTHER_ARGS_MSG`            | `String` | `"The length of the arguments must be 5."`    | 引数不足時のUSAGEメッセージ                    |
-| `OTHER_PAPERMC_EXCEPTION`   | `String` | `"Exception: No official version was found."` | 正式版未検出時の実行時例外メッセージ           |
-| `OTHER_TIME_ZONE`           | `String` | `"Asia/Tokyo"`                                | 日時文字列生成に使用するタイムゾーン           |
-| `OTHER_DATE_TIME_FMT`       | `String` | `"yyyyMMddHHmmss"`                            | 日時フォーマット文字列                         |
-| `OTHER_USER_AGENT`          | `String` | `"wakasaba_orchestrator/1.0"`                 | HTTPリクエストのUser-Agent文字列               |
-| `OTHER_SERVER_INFO`         | `String` | `"{host: \"%s\", port: %d, user: \"%s\"}"`    | サーバ情報のログ出力フォーマット               |
-| `OTHER_CHANNEL_EXEC_OPTION` | `String` | `"exec"`                                      | JSch の `openChannel` に渡すチャンネル種別     |
-| `OTHER_SSH_CONFIG`          | `String` | `"StrictHostKeyChecking"`                     | SSH接続設定キー（known_hostsチェック）         |
-| `OTHER_SSH_CONFIG_VAL`      | `String` | `"no"`                                        | known_hostsチェックを無効化する設定値          |
-| `OTHER_NOT_ALIVE_MSG`       | `String` | `"WARNING: Server Not Active"`                | 非アクティブサーバをスキップした場合の警告ログ |
+| 定数名                         | 型       | 値                                            | 説明                                               |
+|--------------------------------|----------|-----------------------------------------------|----------------------------------------------------|
+| `OTHER_ARGS_MSG`               | `String` | `"The length of the arguments must be 6."`    | 引数不足時のUSAGEメッセージ                        |
+| `OTHER_PAPERMC_EXCEPTION`      | `String` | `"Exception: No official version was found."` | 正式版未検出時の実行時例外メッセージ               |
+| `OTHER_TIME_ZONE`              | `String` | `"Asia/Tokyo"`                                | 日時文字列生成に使用するタイムゾーン               |
+| `OTHER_DATE_TIME_FMT`          | `String` | `"yyyyMMddHHmmss"`                            | 日時フォーマット文字列                             |
+| `OTHER_USER_AGENT`             | `String` | `"wakasaba_orchestrator/1.0"`                 | HTTPリクエストのUser-Agent文字列                   |
+| `OTHER_SERVER_INFO`            | `String` | `"{host: \"%s\", port: %d, user: \"%s\"}"`    | サーバ情報のログ出力フォーマット                   |
+| `OTHER_CHANNEL_EXEC_OPTION`    | `String` | `"exec"`                                      | JSch の `openChannel` に渡すチャンネル種別         |
+| `OTHER_SSH_CONFIG`             | `String` | `"StrictHostKeyChecking"`                     | SSH接続設定キー（known_hostsチェック）             |
+| `OTHER_SSH_CONFIG_VAL`         | `String` | `"no"`                                        | known_hostsチェックを無効化する設定値              |
+| `OTHER_NOT_ALIVE_MSG`          | `String` | `"WARNING: Servers Not Active"`               | 初期疎通不可で全体の保守を開始しない場合の警告ログ |
+| `OTHER_CONNECTION_CHECK`       | `String` | `Checking Connection: %s`                     | 初期疎通確認対象の接続情報                         |
+| `OTHER_MOUNT_STATUS_EXCEPTION` | `String` | `The mount status is not normal.`             | マウント状態不一致の実行時例外                     |
+| `SERVER_REBOOT_WAIT_LIMIT`     | `int`    | `600`                                         | 各サーバの再起動後復帰待ち目安（秒）               |
+| `OTHER_REBOOT_EXCEPTION`       | `String` | `The server did not restart successfully: %s` | 復帰待ち超過の例外（接続情報を埋込）               |
 
 ---
 
@@ -118,4 +140,4 @@
 - 本クラスはインスタンス化を意図しないが、private コンストラクタが定義されていない。必要に応じて追加を検討する。
 - `CMD_WGET_PAPERMC` / `CMD_WGET_PL3XMAP` はパスを文字列連結で組み立てているため、`PATH_DL_PAPERMC` / `PATH_DL_PL3XMAP`
   の値を変更しても `CMD_*` 側には自動反映される。
-- ファイルパスはすべて `/home/mini/` 以下に固定されており、実行環境に依存する。環境を変更する場合はこのクラスの定数を変更すればよい。
+- アプリケーション関連ファイルパスは `/home/mini/` 以下に固定されており、実行環境に依存する。環境を変更する場合はこのクラスの定数を変更すればよい。
