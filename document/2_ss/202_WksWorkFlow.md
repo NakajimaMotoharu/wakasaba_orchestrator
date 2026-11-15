@@ -2,21 +2,21 @@
 
 ## 基本情報
 
-| 項目             | 内容                                                                      |
-|------------------|---------------------------------------------------------------------------|
-| 完全修飾クラス名 | `com.wks.workflow.WksWorkFlow`                                            |
-| ファイル名       | `WksWorkFlow.java`                                                        |
-| 種別             | class（public）                                                           |
-| 責務             | リモート6台と管理端末の工程単位メンテナンスを定義・実行する               |
-| 依存クラス       | `Main`、`SshCommand`、`BashExec`、`ConnectionInformation`、`WksConstants` |
+| 項目             | 内容                                                                                      |
+|------------------|-------------------------------------------------------------------------------------------|
+| 完全修飾クラス名 | `com.wks.workflow.WksWorkFlow`                                                            |
+| ファイル名       | `WksWorkFlow.java`                                                                        |
+| 種別             | class（public）                                                                           |
+| 責務             | リモート6台と管理端末の工程単位メンテナンスを定義・実行する                               |
+| 依存クラス       | `Main`、`SshCommand`、`BashExec`、`ConnectionInformation`、`WksConstants`、`UpdateThread` |
 
 ---
 
 ## フィールド一覧
 
-| フィールド名 | 型                  | 修飾子                 | 初期値     | 説明                                         |
-|--------------|---------------------|------------------------|------------|----------------------------------------------|
-| `log`        | `ArrayList<String>` | `private static final` | `Main.log` | 初期疎通確認対象・警告・管理端末区切りの追記 |
+| フィールド名 | 型             | 修飾子                 | 初期値     | 説明                                         |
+|--------------|----------------|------------------------|------------|----------------------------------------------|
+| `log`        | `List<String>` | `private static final` | `Main.log` | 初期疎通確認対象・警告・管理端末区切りの追記 |
 
 ---
 
@@ -29,7 +29,7 @@
 | `isAllAlive(ConnectionInformation[] cis)`        | `boolean`                 | `private static` | 各対象をログへ記録し、最初の疎通不可でfalse |
 | `systemStop(ConnectionInformation[] cis)`        | `void`                    | `private static` | 両サービス停止後に共通60秒待機              |
 | `allUMount(ConnectionInformation[] cis)`         | `void`                    | `private static` | NASを除き共有解除・状態確認                 |
-| `allUpdate(ConnectionInformation[] cis)`         | `void`                    | `private static` | 全6台の更新                                 |
+| `allUpdate(ConnectionInformation[] cis)`         | `void`                    | `private static` | 全6台の並列更新・全join・例外検出           |
 | `allReboot(ConnectionInformation[] cis)`         | `void`                    | `private static` | 全6台へ再起動指示                           |
 | `allRebootComplete(ConnectionInformation[] cis)` | `void`                    | `private static` | 各台600秒目安のSSH復帰待ち                  |
 | `allMount(ConnectionInformation[] cis)`          | `void`                    | `private static` | NASを除き共有接続・状態確認                 |
@@ -48,7 +48,8 @@ public static void execScheduledJob(String[] servers)
 ```
 
 引数は6つの接続情報ファイルパス。読み込み後の配列添字とサーバ定数を一致させる。
-各工程の対象ループは直列であり、全台が工程を完了してから次工程へ進む。
+OS更新のみサーバ間を並列化する。全更新スレッドの終了待ちと例外検出が正常に完了してから次工程へ進む。
+ほかの工程の対象ループは従来どおり直列である。
 
 ```
 1. setConnectionInformation(servers): 6ファイルを読み込み cis[0]～cis[5] を設定
@@ -56,7 +57,8 @@ public static void execScheduledJob(String[] servers)
    最初の疎通不可 → WARNING: Servers Not Active → 保守せずMainへ復帰
 3. systemStop(cis): PaperMC停止 → Schubert停止 → 管理端末で60秒待機（1回）
 4. allUMount(cis): サーバ0～4の /nas・/share を解除し、findmntの出力がないことを確認
-5. allUpdate(cis): サーバ0～5で1台ずつ update → upgrade
+5. allUpdate(cis): サーバ0～5を並列更新（各台 update → upgrade）
+   全スレッドのjoin → 引数順の例外検出 → 全件正常なら次工程へ
 6. allReboot(cis): サーバ0～5へ順に再起動指示
 7. BashExec.waitOneMin(): 管理端末で60秒待機（1回）
 8. allRebootComplete(cis): サーバ0～5を順に確認（各呼び出し600秒目安）
@@ -68,6 +70,27 @@ public static void execScheduledJob(String[] servers)
 13. Mainで終了時刻記録・ログファイル出力
 例外発生: 後続工程中止 → Mainでスタックトレース・終了ログ出力 → 手動復旧
 ```
+
+### `allUpdate(ConnectionInformation[] cis)`
+
+```java
+private static void allUpdate(ConnectionInformation[] cis)
+        throws JSchException, IOException, InterruptedException;
+```
+
+```
+1. UpdateThread[cis.length] を生成
+2. 各cis[i]でUpdateThreadを生成しstart()（このループ内ではjoinしない）
+3. 全スレッドに対して順にjoin()
+4. 全スレッドに対して引数順にexceptionDetection()
+5. 例外がなければ呼び出し元へ復帰し、全台再起動工程へ進む
+```
+
+- 更新スレッド内の例外は保存し、全スレッドの終了待ち後に親スレッドで引数順に検出する。
+- `JSchException`・`IOException`・`InterruptedException` は同じ例外を再送出し、その他の `Exception` は原因を保持した
+  `RuntimeException` で再送出する。
+- 親スレッドで例外を再送出した場合は、再起動以降を実行せず、従来どおりMainでログ出力して手動復旧する。
+- 更新失敗時もほかの開始済みタスクはキャンセルせず、終了を待つ。複数の失敗は集約せず、引数順で最初に検出した例外を再送出する。
 
 ### 各対象の役割と処理内容
 
@@ -88,12 +111,61 @@ public static void execScheduledJob(String[] servers)
 - `isAllAlive` は `OTHER_CONNECTION_CHECK` に接続情報を埋めてログ追記後、`SshCommand.isAlive`
   を実行する。falseなら即false、全件成功ならtrue（`JSchException`）。
 - `allMount`・`allUMount` は添字が `SERVER_NAS` でない場合のみそれぞれ `mount`・`umount` を呼ぶ。
-- `allUpdate` は各台で `update` → `upgrade`、`allReboot` は各台で `shutdown` を呼ぶ。
+- `allUpdate` は各台の `UpdateThread` を開始し、全join後に例外を検出する。`allReboot` は各台で `shutdown` を呼ぶ。
 - `allRebootComplete` は各台で `waitForBecomeActive(ci, SERVER_REBOOT_WAIT_LIMIT)` を呼ぶ。
 - `systemStop` は `SERVER_PAPER`、`SERVER_SCHUBERT` の順に停止し、`BashExec.waitOneMin()` を呼ぶ。
 - `systemPreSetup` は `SERVER_PAPER` に `backupPaperMC` → `wgetPaperMc` → `movePaperMc` を呼ぶ。
 - `systemStart` は `startPaperMC` → `startSchubert` を呼ぶ。
 - 上記のコマンド実行系ヘルパーは `JSchException`・`IOException`・`InterruptedException` を上位へ委譲する。
+
+---
+
+## 同一ソース内のクラス：UpdateThread
+
+| 項目             | 内容                                                          |
+|------------------|---------------------------------------------------------------|
+| 完全修飾クラス名 | `com.wks.workflow.UpdateThread`                               |
+| 定義ファイル     | `WksWorkFlow.java`                                            |
+| 種別             | トップレベルclass（package-private）。`Thread` を継承         |
+| 責務             | サーバ1台のOS更新を実行し、例外を親スレッドによる検出まで保持 |
+| 依存クラス       | `ConnectionInformation`、`SshCommand`                         |
+
+### フィールド一覧
+
+| フィールド名           | 型                      | 修飾子          | 初期値・役割                 |
+|------------------------|-------------------------|-----------------|------------------------------|
+| `ci`                   | `ConnectionInformation` | `private final` | コンストラクタ引数。更新対象 |
+| `jSchException`        | `JSchException`         | `private`       | null。発生時に保持           |
+| `ioException`          | `IOException`           | `private`       | null。発生時に保持           |
+| `interruptedException` | `InterruptedException`  | `private`       | null。発生時に保持           |
+| `exception`            | `Exception`             | `private`       | null。その他例外を保持       |
+
+### メソッド一覧
+
+| メソッド                                 | 戻り値型 | 修飾子             | 処理                                   |
+|------------------------------------------|----------|--------------------|----------------------------------------|
+| `UpdateThread(ConnectionInformation ci)` | -        | `public`           | 対象接続情報を保持                     |
+| `run()`                                  | `void`   | `public`、Override | update→upgrade。例外を保持して終了     |
+| `exceptionDetection()`                   | `void`   | `public`           | 保持した例外があれば親スレッドで再送出 |
+
+### メソッド詳細
+
+```java
+public UpdateThread(ConnectionInformation ci);
+
+@Override
+public void run();
+
+public void exceptionDetection()
+        throws JSchException, IOException, InterruptedException;
+```
+
+- `run` はupdate後にupgradeを実行する。updateが例外となれば、そのタスクのupgradeは実行しない。
+- `JSchException`・`IOException`・`InterruptedException` は対応フィールドへ保持し、その他の `Exception` も保持する。
+- `exceptionDetection` は上記3検査例外を同じインスタンスのまま再送出し、その他は `RuntimeException(exception)`
+  として原因付きで再送出する。
+- 保持例外がなければ何もせず復帰する。複数タスクの例外を集約する処理はない。
+- `Error` は捕捉しない。`join()` 自体が割り込まれた場合は親の `InterruptedException` を上位へ委譲し、子のキャンセルは行わない。
 
 ---
 
@@ -106,13 +178,17 @@ public static void execScheduledJob(String[] servers)
 | `JSchException`              | セッション生成・SSH接続・コマンド実行失敗                                                         |
 | `RuntimeException`（非検査） | マウント状態不一致、SSH復帰待ち超過、PaperMC正式版未検出                                          |
 
+更新タスク内の例外は `UpdateThread` で一時保持し、全join後に親で再送出する。
 検査例外・非検査例外とも `Main.main` へ伝播する。初期疎通不可は例外ではなく警告ログを残して復帰する。
 
 ---
 
 ## 設計上の注意点
 
-- 全台メンテナンスは工程単位の直列処理であり、並列実行ではない。
+- 共有ログの宣言型は `List<String>`、実体は `Main` が生成する `CopyOnWriteArrayList<String>` とする。各クラスは同一インスタンスを参照する。
+- 並列更新中の `add`・`addAll` は安全に実行できるが、コマンド行と標準出力を一体で排他しないため、サーバ間のログは混在する。サーバ別の順序・まとまりは保証しない。
+
+- 工程の順序は維持し、OS更新工程のみサーバ間を並列化する。共有操作・再起動・復帰確認・アプリ操作は従来どおり直列とする。
 - 全機疎通確認はサービス停止前に行い、最初の失敗で中止する。管理端末のOS更新も開始しない。
 - 初期疎通確認前に `Checking Connection: %s`（host・port・user）を記録する。リモート各台の `LOG_SPLIT`
   は記録せず、管理端末の区切りのみ維持する。

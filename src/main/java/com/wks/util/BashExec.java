@@ -8,12 +8,13 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.List;
 
 public class BashExec {
     /**
      * logインスタンス取得
      */
-    private static final ArrayList<String> log = Main.log;
+    private static final List<String> log = Main.log;
 
     /**
      * updateコマンドの実行

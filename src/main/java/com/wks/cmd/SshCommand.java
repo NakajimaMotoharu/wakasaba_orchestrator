@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * SSHコマンドの実行を行うラッパークラス
@@ -21,7 +22,7 @@ public class SshCommand {
     /**
      * logインスタンス取得
      */
-    private static final ArrayList<String> log = Main.log;
+    private static final List<String> log = Main.log;
 
     /**
      * updateコマンドの実行

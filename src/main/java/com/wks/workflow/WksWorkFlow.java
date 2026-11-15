@@ -9,6 +9,7 @@ import com.wks.util.ConnectionInformation;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * サーバ操作ワークフロークラス
@@ -17,7 +18,7 @@ public class WksWorkFlow {
     /**
      * logインスタンス取得
      */
-    private static final ArrayList<String> log = Main.log;
+    private static final List<String> log = Main.log;
 
     /**
      * スケジュールに従い実行
@@ -162,12 +163,27 @@ public class WksWorkFlow {
      * @throws InterruptedException SSHコマンド実行に失敗
      */
     private static void allUpdate(ConnectionInformation[] cis) throws JSchException, IOException, InterruptedException {
-        // 全機に対してコマンド実行
-        for (ConnectionInformation ci : cis) {
-            // UPDATEコマンドの実行
-            SshCommand.update(ci);
-            // UPGRADEコマンドの実行
-            SshCommand.upgrade(ci);
+        // 並列化用UpdateThreadの配列を作成
+        UpdateThread[] updateThread = new UpdateThread[cis.length];
+
+        // 各サーバについて実行
+        for (int i = 0; i < cis.length; i++){
+            // Threadをサーバ情報を用いて初期化
+            updateThread[i] = new UpdateThread(cis[i]);
+            // Updateを並列実行
+            updateThread[i].start();
+        }
+
+        // 各UpdateThreadに対して実行
+        for (UpdateThread thread : updateThread) {
+            // 各サーバのUpdateが完了するまで待機
+            thread.join();
+        }
+
+        // 各UpdateThreadに対して実行
+        for (UpdateThread thread : updateThread) {
+            // Updateで例外が発生していた場合吸収
+            thread.exceptionDetection();
         }
     }
 
@@ -257,5 +273,84 @@ public class WksWorkFlow {
         SshCommand.startPaperMC(cis[WksConstants.SERVER_PAPER]);
         // Schubert起動コマンドの実行
         SshCommand.startSchubert(cis[WksConstants.SERVER_SCHUBERT]);
+    }
+}
+
+/**
+ * Update並列化用スレッド
+ */
+class UpdateThread extends Thread {
+    /**
+     * サーバ情報
+     */
+    private final ConnectionInformation ci;
+    /**
+     * JSchExceptionが発生していた場合の一時格納先
+     */
+    private JSchException jSchException = null;
+    /**
+     * IOExceptionが発生していた場合の一時格納先
+     */
+    private IOException ioException = null;
+    /**
+     * InterruptedExceptionが発生していた場合の一時格納先
+     */
+    private InterruptedException interruptedException = null;
+    /**
+     * その他Exceptionが発生していた場合の一時格納先
+     */
+    private Exception exception = null;
+
+    /**
+     * コンストラクタ サーバ情報を用いて初期化
+     *
+     * @param ci サーバ情報
+     */
+    public UpdateThread(ConnectionInformation ci){
+        // サーバ情報フィールドを引数で初期化
+        this.ci = ci;
+    }
+
+    /**
+     * Updateの実行
+     */
+    @Override
+    public void run() {
+        try {
+            // UPDATEコマンドの実行
+            SshCommand.update(ci);
+            // UPGRADEコマンドの実行
+            SshCommand.upgrade(ci);
+        } catch (JSchException e) {
+            // JSchExceptionが発生した場合例外格納
+            jSchException = e;
+        } catch (IOException e) {
+            // IOExceptionが発生した場合例外格納
+            ioException = e;
+        } catch (InterruptedException e) {
+            // InterruptedExceptionが発生した場合例外格納
+            interruptedException = e;
+        } catch (Exception e){
+            // その他Exceptionが発生した場合例外格納
+            exception = e;
+        }
+    }
+
+    /**
+     * 例外が発生していた場合、throwsする
+     *
+     * @throws JSchException SSHコマンド実行に失敗
+     * @throws InterruptedException SSHコマンド実行に失敗
+     * @throws IOException Bashコマンド実行に失敗
+     */
+    public void exceptionDetection() throws JSchException, IOException, InterruptedException {
+        // JSchExceptionが発生していた場合throws
+        if (jSchException != null) throw jSchException;
+        // IOExceptionが発生していた場合throws
+        if (ioException != null) throw ioException;
+        // InterruptedExceptionが発生していた場合throws
+        if (interruptedException != null) throw interruptedException;
+        // その他Exceptionが発生していた場合throws
+        if (exception != null) throw new RuntimeException(exception);
     }
 }

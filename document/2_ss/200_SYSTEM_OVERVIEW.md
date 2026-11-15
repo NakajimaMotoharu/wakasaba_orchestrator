@@ -58,17 +58,18 @@ com.wks
 
 ## クラス一覧
 
-| クラス名                                             | パッケージ         | 種別   | 役割                                                   |
-|------------------------------------------------------|--------------------|--------|--------------------------------------------------------|
-| [Main](./201_Main)                                   | `com.wks.main`     | class  | エントリポイント。引数検証・ログ管理・ログファイル出力 |
-| [WksWorkFlow](./202_WksWorkFlow)                     | `com.wks.workflow` | class  | 6台のリモートサーバ＋自サーバへの処理シーケンス定義    |
-| [SshCommand](./203_SshCommand)                       | `com.wks.cmd`      | class  | SSH経由コマンド実行の業務ロジックラッパー              |
-| [PaperUrlGen](./204_PaperUrlGen)                     | `com.wks.papermc`  | class  | PaperMC・Pl3xMap APIレスポンスJSONパーサ               |
-| [ConnectionInformation](./205_ConnectionInformation) | `com.wks.util`     | record | サーバ接続情報（host/port/user/key）の保持と読込み     |
-| [SshExec](./206_SshExec)                             | `com.wks.util`     | class  | JSch を用いたSSHセッション管理・コマンド実行           |
-| [BashExec](./207_BashExec)                           | `com.wks.util`     | class  | ProcessBuilder を用いたローカルBashコマンド実行        |
-| [Curl](./208_Curl)                                   | `com.wks.util`     | class  | Java標準HttpClient を用いたHTTP GETリクエスト          |
-| [WksConstants](./209_WksConstants)                   | `com.wks.parts`    | class  | アプリケーション全体で使用する定数の一元管理           |
+| クラス名                                             | パッケージ         | 種別                                 | 役割                                                     |
+|------------------------------------------------------|--------------------|--------------------------------------|----------------------------------------------------------|
+| [Main](./201_Main)                                   | `com.wks.main`     | class                                | エントリポイント。引数検証・ログ管理・ログファイル出力   |
+| [WksWorkFlow](./202_WksWorkFlow)                     | `com.wks.workflow` | class                                | 6台のリモートサーバ＋自サーバへの処理シーケンス定義      |
+| `UpdateThread`                                       | `com.wks.workflow` | class（package-private、Thread継承） | WksWorkFlow.java内。サーバ1台のupdate・upgradeと例外保持 |
+| [SshCommand](./203_SshCommand)                       | `com.wks.cmd`      | class                                | SSH経由コマンド実行の業務ロジックラッパー                |
+| [PaperUrlGen](./204_PaperUrlGen)                     | `com.wks.papermc`  | class                                | PaperMC・Pl3xMap APIレスポンスJSONパーサ                 |
+| [ConnectionInformation](./205_ConnectionInformation) | `com.wks.util`     | record                               | サーバ接続情報（host/port/user/key）の保持と読込み       |
+| [SshExec](./206_SshExec)                             | `com.wks.util`     | class                                | JSch を用いたSSHセッション管理・コマンド実行             |
+| [BashExec](./207_BashExec)                           | `com.wks.util`     | class                                | ProcessBuilder を用いたローカルBashコマンド実行          |
+| [Curl](./208_Curl)                                   | `com.wks.util`     | class                                | Java標準HttpClient を用いたHTTP GETリクエスト            |
+| [WksConstants](./209_WksConstants)                   | `com.wks.parts`    | class                                | アプリケーション全体で使用する定数の一元管理             |
 
 ---
 
@@ -95,7 +96,8 @@ Mainで6引数を検証し、開始ログを記録して次のワークフロー
    最初の疎通不可 → WARNING: Servers Not Active → 保守せずMainへ復帰
 3. systemStop(cis): PaperMC停止 → Schubert停止 → 管理端末で60秒待機（1回）
 4. allUMount(cis): サーバ0～4の /nas・/share を解除し、findmntの出力がないことを確認
-5. allUpdate(cis): サーバ0～5で1台ずつ update → upgrade
+5. allUpdate(cis): サーバ0～5を並列更新（各台 update → upgrade）
+   全スレッドのjoin → 引数順の例外検出 → 全件正常なら次工程へ
 6. allReboot(cis): サーバ0～5へ順に再起動指示
 7. BashExec.waitOneMin(): 管理端末で60秒待機（1回）
 8. allRebootComplete(cis): サーバ0～5を順に確認（各呼び出し600秒目安）
@@ -118,7 +120,7 @@ Mainで6引数を検証し、開始ログを記録して次のワークフロー
 | 5            | `SERVER_NAS`      | NAS              | OS更新・再起動。自身への共有操作は行わない                         |
 | 管理端末     | -                 | 本バッチ実行端末 | 固定待機・時刻取得、最後にOS更新・60秒遅延再起動                   |
 
-- 全台メンテナンスは工程単位の直列処理であり、並列実行ではない。
+- 工程の順序は維持し、OS更新工程のみサーバ間を並列化する。共有操作・再起動・復帰確認・アプリ操作は従来どおり直列とする。
 - 全機疎通確認はサービス停止前に行い、最初の失敗で中止する。管理端末のOS更新も開始しない。
 - 初期疎通確認前に `Checking Connection: %s`（host・port・user）を記録する。リモート各台の `LOG_SPLIT`
   は記録せず、管理端末の区切りのみ維持する。
@@ -137,6 +139,9 @@ Mainで6引数を検証し、開始ログを記録して次のワークフロー
 
 ## 出力ファイル
 
+- 共有ログの宣言型は `List<String>`、実体は `Main` が生成する `CopyOnWriteArrayList<String>` とする。各クラスは同一インスタンスを参照する。
+- 並列更新中の `add`・`addAll` は安全に実行できるが、コマンド行と標準出力を一体で排他しないため、サーバ間のログは混在する。サーバ別の順序・まとまりは保証しない。
+
 | 定数                   | 管理端末上の出力先                                     | 内容・出力タイミング                                   |
 |------------------------|--------------------------------------------------------|--------------------------------------------------------|
 | `PATH_EXEC_LOG`        | `/home/mini/wakasaba_orchestrator/log/log_%s.txt`      | 終了時刻ごとの実行ログ。`Main.outLog` で出力           |
@@ -151,6 +156,12 @@ Pl3xMapをバージョン不一致でスキップした場合も出力するが�
 ---
 
 ## PaperMCバージョン選択と例外
+
+- 更新スレッド内の例外は保存し、全スレッドの終了待ち後に親スレッドで引数順に検出する。
+- `JSchException`・`IOException`・`InterruptedException` は同じ例外を再送出し、その他の `Exception` は原因を保持した
+  `RuntimeException` で再送出する。
+- 親スレッドで例外を再送出した場合は、再起動以降を実行せず、従来どおりMainでログ出力して手動復旧する。
+- 更新失敗時もほかの開始済みタスクはキャンセルせず、終了を待つ。複数の失敗は集約せず、引数順で最初に検出した例外を再送出する。
 
 `getPaperMcVersion` はAPI応答順に系列・候補を探索し、ハイフン（`-`）を含むpre・rc等を除外する。
 系列内に正式版がなければ次の系列を探索し、最初に見つかった正式版をダウンロードURLとSHA-256期待値の取得に使用する。数値比較・並べ替えは行わない。
