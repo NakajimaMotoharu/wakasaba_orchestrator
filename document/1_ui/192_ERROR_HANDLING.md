@@ -2,20 +2,23 @@
 
 ## 概要
 
-本アプリケーションにおける例外処理の設計方針と、各例外の種類・発生状況・伝播経路をまとめる。
+例外の伝播経路と、AplLogによるERR記録・終了処理を定義する。
 
 ---
 
 ## 基本方針
 
-各業務メソッドでは個別の回復処理を行わず、例外を `WksWorkFlow.execScheduledJob` から `Main.main` まで伝播させる。  
-`Main.main` はワークフロー実行を `try-catch` で囲み、`Exception`
-を捕捉してスタックトレースをログへ保存した後、終了時刻記録とログファイル出力を行う。  
-ただし、`Main.outLog` が送出する `IOException` は `main` で捕捉せずJVMへ伝播させる。
+- 各部品は個別の自動回復を行わず、業務例外をMainまで伝播する。
+- MainはワークフローのExceptionを捕捉し、AplLog.outExceptionLog(localhost, e)へ渡す。
+- AplLogはprintStackTraceで例外全体を文字列化し、型・メッセージ・発生箇所・原因・Suppressedを各行のERRとして受付する。
+- MainはSYS終了ログ追加→endOfLogOutput→joinで受付済みログの出力完了を待つ。
+- 初回getInstanceのオープン失敗はワークフロー用catchの外でIOExceptionとして伝播する。Errorは捕捉しない。
+- ログスレッドのsleep割り込みは内部でERRを追加して継続する。通知後は追加受付しない。Mainのjoin割り込みは上位へ伝播する。
+- PrintStreamの書き込み・クローズ時のエラーフラグ検査は追加しない。
 
 ---
 
-## 例外の種類と発生状況
+## 例外の種類と発生箇所
 
 ### 検査例外（Checked Exception）
 
@@ -26,7 +29,8 @@
 | `IOException`                            | `SshExec.execute`                     | SSH標準出力の読み取り失敗                             |
 | `IOException`                            | `BashExec.runCommand`                 | ローカルプロセスの起動・出力読み取り失敗              |
 | `IOException`                            | `Curl.exec`                           | HTTPリクエストのネットワーク障害                      |
-| `IOException`                            | `Main.outLog`                         | ログファイルへの書き込み失敗                          |
+| `FileNotFoundException`（`IOException`） | `AplLog.getInstance`                  | ログ初回オープン失敗                                  |
+| `InterruptedException`                   | `Main`のAplLog.join                   | 出力終了待ち中の割り込み                              |
 | `InterruptedException`                   | `SshExec.execute`                     | SSH待機中の割り込み                                   |
 | `InterruptedException`                   | `SshCommand.waitForBecomeActive`      | ポーリングスリープ中の割り込み                        |
 | `InterruptedException`                   | `BashExec.runCommand`                 | `process.waitFor()` 中の割り込み                      |
@@ -50,69 +54,34 @@
 
 ---
 
-## 異常時運用（No.309）
+## 異常時運用
 
-- 初期疎通不可は例外とせず、最初の失敗対象のログと `WARNING: Servers Not Active` を残して保守せず復帰する。
-- アンマウント後に `findmnt` 出力が残る場合、マウント後に出力がない場合は `OTHER_MOUNT_STATUS_EXCEPTION` で中止する。
-- 再起動後は各サーバ600秒目安でSSH復帰を待ち、失敗した接続試行後に期限超過なら `OTHER_REBOOT_EXCEPTION`
-  に対象接続情報を埋めて中止する。最後の試行で成功した場合は続行する。
-- 時刻取得・待機で発生した `IOException`・`InterruptedException` もMainへ伝播する。
-- 例外発生時は後続工程を実行しない。PaperMC固有の例外でもSchubertを起動しない。自動復旧・ロールバックは行わず、ログを確認して手動復旧する。
-- `SshExec.execute()` の終了コード取得は追加しない。
+- 初期疎通不可では対象のAPLとlocalhostのERR（Servers Not Active）を記録して保守せず復帰する。
+- マウント状態不一致、SSH復帰待ち超過、PaperMC正式版未検出等は例外で後続工程を中止する。
+- 正式版未検出時のメッセージはOTHER_PAPERMC_EXCEPTION（No official version was found.）。
+- 自動復旧・ロールバックは行わず、運用者がログを確認して手動復旧する。
+- PaperMCの例外でもSchubertを起動しない。初期疎通確認の接続失敗以外は成功扱いにしない。
+- バージョンファイル出力到達前の例外時は以前の内容が残る。ファイル形式・出力時点はNo.308から変更しない。
 
 ---
 
 ## 並列更新の例外伝播（No.310）
 
-- 更新スレッド内の例外は保存し、全スレッドの終了待ち後に親スレッドで引数順に検出する。
-- `JSchException`・`IOException`・`InterruptedException` は同じ例外を再送出し、その他の `Exception` は原因を保持した
-  `RuntimeException` で再送出する。
-- 親スレッドで例外を再送出した場合は、再起動以降を実行せず、従来どおりMainでログ出力して手動復旧する。
-- 更新失敗時もほかの開始済みタスクはキャンセルせず、終了を待つ。複数の失敗は集約せず、引数順で最初に検出した例外を再送出する。
+子スレッドは例外を保持して終了し、親は全join後に引数順で検出する。
+JSchException・IOException・InterruptedExceptionは同じ例外を再送出し、その他ExceptionはRuntimeException(cause)とする。
+開始済みのほかの更新をキャンセルせず、例外の集約も行わない。親のjoin割り込み時も子のキャンセルは追加しない。
 
 ```
-子: UpdateThread.run()
-  → update → upgrade
-  → catch: 例外を対応フィールドへ保存して終了
-親: WksWorkFlow.allUpdate()
-  → 全スレッドjoin
-  → 引数順にexceptionDetection()
-  → 検査例外はそのまま、その他ExceptionはRuntimeException(cause)で再送出
-  → WksWorkFlow.execScheduledJob → Main.main
-  → スタックトレース・終了時刻記録 → ログ出力 → 手動復旧
+SshExec / BashExec / Curl / PaperUrlGen 等
+ → SshCommand / UpdateThread / WksWorkFlow
+ → Main.catch(Exception)
+ → AplLog.outExceptionLog(localhost, e)
+ → キューへ各行ERR追加 → AplLog.runがファイルへ随時出力
+ → Main: SYS終了 → 受付終了 → join
+
+AplLog初回オープン失敗 → Main.throws IOException → JVM
+AplLog.join割り込み → Main.throws InterruptedException → JVM
 ```
-
-`join()` 自体の割り込みは親の `InterruptedException` として上位へ委譲する。子スレッドのキャンセルは行わない。
-`Error` は捕捉対象外。共有ログは `List<String>` 型の `CopyOnWriteArrayList` を使用し、並列追記に対応するが、サーバ間の記録順は不定である。
-
----
-
-## 例外伝播経路
-
-PaperMC正式版未検出時は `OTHER_PAPERMC_EXCEPTION`（`Exception: No official version was found.`）をメッセージとして
-`RuntimeException` を送出する。
-バージョンファイルのオープン失敗は `IOException` として上位へ伝播する。
-両者ともワークフローの後続処理を中断し、既存の `Main.main` でスタックトレースをログへ記録する。
-
-ファイル出力到達前に例外が発生した場合はバージョンファイルを更新せず、既存内容が残る。
-出力先ディレクトリの存在と作成・上書き権限、十分なディスク容量を前提とし、`PrintStream` の書き込み・クローズ時のエラーフラグ確認は行わない。
-
-```
-各ユーティリティクラス
-  └─► SshCommand / BashExec
-        └─► WksWorkFlow.execScheduledJob
-              └─► Main.main
-                    ├─ catch (Exception e)
-                    ├─ スタックトレースを Main.log へ追記
-                    ├─ 終了時刻を Main.log へ追記
-                    └─ outLog() でログファイル出力
-
-Main.outLog の IOException
-  └─► Main.main の throws IOException
-        └─► JVM
-```
-
----
 
 ## 特例：`SshExec.isAlive()` の例外吸収
 
@@ -126,21 +95,22 @@ Main.outLog の IOException
 
 ---
 
-## ログ未出力のケース
+## ログ未出力・不完全出力のケース
 
-以下の状況ではログファイルが出力されない（または不完全になる）。これらはすべて設計上許容される動作である。
-
-| 状況                                         | 結果                                                                                 |
-|----------------------------------------------|--------------------------------------------------------------------------------------|
-| `main` に渡す引数が6つでない                 | 標準出力にUSAGEメッセージを表示して終了。ログファイルは生成されない                  |
-| ワークフロー処理途中で例外が発生             | スタックトレースと終了時刻を追記し、途中までの実行ログとともにログファイルへ出力する |
-| ログファイルの出力先ディレクトリが存在しない | `IOException` が発生してJVMが終了                                                    |
+| 状況                 | 結果                                                            |
+|----------------------|-----------------------------------------------------------------|
+| 引数が6つでない      | USAGEのみ。AplLogとファイルは作成しない                         |
+| 初回ログオープン失敗 | 開始ログ前にIOException。ワークフローを開始しない               |
+| 業務例外             | それまでのログと例外各行ERR、SYS終了を記録して終了              |
+| 終了通知後の追加     | 受付せず破棄する。全発行処理完了後に通知する運用前提            |
+| SSH実行途中の例外    | execute未完了の標準出力配列はAplLogへ渡されず、未記録となり得る |
 
 ---
 
-## 設計上の改善余地（参考）
+## 備考（将来対応）
 
-本設計では以下は対象外とするが、将来の改善候補として記録する。
+- 将来対応1（ローカル大量出力時の停止リスク）：BashExecは終了待ちの後に標準出力を読み取るため、パイプが満杯になると子プロセスとJava側が相互待ちになる可能性がある。現在の運用では許容し、今回の変更では未解消とする。
+- 将来対応2（SSH標準出力の逐次ログ化）：SshExecは標準出力を配列に蓄積し、コマンド終了後にSshCommandからAplLogへ渡す。実行中の進捗は記録しない現行仕様を許容し、将来対応1とあわせて見直す。
+- 上記2件は解消済みではなく、明示的に保留した事項である。
 
-- `PaperUrlGen` の `JacksonException` / `NullPointerException` に対する明示的なハンドリングを追加することで、APIレスポンス変更時のデバッグが容易になる。
-- `Curl.exec` におけるHTTPステータスコードの検証を追加することで、APIエラー時の原因特定が容易になる。
+APIレスポンス変更時の診断やHTTPステータス検証は従来どおり今後の改善候補とする。

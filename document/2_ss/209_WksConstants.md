@@ -27,19 +27,19 @@
 
 ### ファイルパス系
 
-| 定数名                           | 型       | 値                                           | 説明                                                |
-|----------------------------------|----------|----------------------------------------------|-----------------------------------------------------|
-| `PATH_WAKASABA_EXEC`             | `String` | `"/home/mini/wakasaba_orchestrator/"`        | 管理端末上の共通ディレクトリ                        |
-| `PATH_EXEC_LOG`                  | `String` | `PATH_WAKASABA_EXEC + "log/log_%s.txt"`      | ログファイル出力先パス。`%s` に日時文字列を埋め込む |
-| `PATH_PAPERMC_VERSION`           | `String` | `PATH_WAKASABA_EXEC + "papermc_version.txt"` | 管理端末上のPaperMCバージョンファイル出力先         |
-| `PATH_DL_PAPERMC`                | `String` | `"/home/mini/download/paper.jar"`            | PaperMC JARのダウンロード先パス                     |
-| `PATH_DL_PL3XMAP`                | `String` | `"/home/mini/download/pl3xmap.jar"`          | Pl3xMap JARのダウンロード先パス                     |
-| `PATH_PROD_PAPERMC`              | `String` | `"/home/mini/mcs/prod/paper.jar"`            | PaperMC JAR本番配置先パス                           |
-| `PATH_PROD_PL3XMAP`              | `String` | `"/home/mini/mcs/prod/plugins/pl3xmap.jar"`  | Pl3xMap JAR本番配置先パス                           |
-| `PATH_BACKUP_SHELL`              | `String` | `"/home/mini/mcs/shell/backup.sh"`           | バックアップシェルスクリプトのパス                  |
-| `PATH_PROD_SCHUBERT_APP`         | `String` | `"/home/mini/schubert/"`                     | Schubertアプリ格納ディレクトリ                      |
-| `PATH_PROD_SCHUBERT_START_SHELL` | `String` | `"/home/mini/schubert/start_schubert.sh"`    | Schubert起動シェルパス                              |
-| `PATH_PROD_SCHUBERT_STOP_SHELL`  | `String` | `"/home/mini/schubert/stop_schubert.sh"`     | Schubert停止シェルパス                              |
+| 定数名                           | 型       | 値                                           | 説明                                                        |
+|----------------------------------|----------|----------------------------------------------|-------------------------------------------------------------|
+| `PATH_WAKASABA_EXEC`             | `String` | `"/home/mini/wakasaba_orchestrator/"`        | 管理端末上の共通ディレクトリ                                |
+| `PATH_EXEC_LOG`                  | `String` | `PATH_WAKASABA_EXEC + "log/log_%s.txt"`      | ログファイル出力先パス。`%s` にAplLog初回生成時刻を埋め込む |
+| `PATH_PAPERMC_VERSION`           | `String` | `PATH_WAKASABA_EXEC + "papermc_version.txt"` | 管理端末上のPaperMCバージョンファイル出力先                 |
+| `PATH_DL_PAPERMC`                | `String` | `"/home/mini/download/paper.jar"`            | PaperMC JARのダウンロード先パス                             |
+| `PATH_DL_PL3XMAP`                | `String` | `"/home/mini/download/pl3xmap.jar"`          | Pl3xMap JARのダウンロード先パス                             |
+| `PATH_PROD_PAPERMC`              | `String` | `"/home/mini/mcs/prod/paper.jar"`            | PaperMC JAR本番配置先パス                                   |
+| `PATH_PROD_PL3XMAP`              | `String` | `"/home/mini/mcs/prod/plugins/pl3xmap.jar"`  | Pl3xMap JAR本番配置先パス                                   |
+| `PATH_BACKUP_SHELL`              | `String` | `"/home/mini/mcs/shell/backup.sh"`           | バックアップシェルスクリプトのパス                          |
+| `PATH_PROD_SCHUBERT_APP`         | `String` | `"/home/mini/schubert/"`                     | Schubertアプリ格納ディレクトリ                              |
+| `PATH_PROD_SCHUBERT_START_SHELL` | `String` | `"/home/mini/schubert/start_schubert.sh"`    | Schubert起動シェルパス                                      |
+| `PATH_PROD_SCHUBERT_STOP_SHELL`  | `String` | `"/home/mini/schubert/stop_schubert.sh"`     | Schubert停止シェルパス                                      |
 
 ### Linuxコマンド系
 
@@ -76,13 +76,18 @@
 
 ### ログメッセージ系
 
-| 定数名            | 型       | 値                                      | 説明                                   |
-|-------------------|----------|-----------------------------------------|----------------------------------------|
-| `LOG_START_TIME`  | `String` | `"Batch start time: %s"`                | バッチ開始時刻ログフォーマット         |
-| `LOG_END_TIME`    | `String` | `"Batch end time: %s"`                  | バッチ終了時刻ログフォーマット         |
-| `LOG_COMMAND`     | `String` | `"$ %s"`                                | 実行コマンドのログフォーマット         |
-| `LOG_SPLIT`       | `String` | `"/* --------Job start: %s-------- */"` | サーバ処理開始の区切りログフォーマット |
-| `LOG_THIS_SERVER` | `String` | `"this server"`                         | 自サーバ識別用文字列                   |
+| 定数名                   | 型       | 値                                | 説明                         |
+|--------------------------|----------|-----------------------------------|------------------------------|
+| `LOG_LEVEL_SYSTEM`       | `String` | `"SYS"`                           | システムログ                 |
+| `LOG_LEVEL_APPLICATIONS` | `String` | `"APL"`                           | アプリログ                   |
+| `LOG_LEVEL_COMMAND`      | `String` | `"CMD"`                           | コマンドログ                 |
+| `LOG_LEVEL_EXCEPTION`    | `String` | `"ERR"`                           | 例外・異常メッセージ         |
+| `LOG_LEVEL_OUTPUT`       | `String` | `"OUT"`                           | 標準出力ログ                 |
+| `LOG_PARTS_DOL`          | `String` | `"$ "`                            | CMD本文接頭辞                |
+| `LOG_PARTS_LF`           | `String` | `"\n"`                            | LF改行                       |
+| `LOG_FORMAT`             | `String` | `"[%s %s %s]: %s" + LOG_PARTS_LF` | 日時・サーバIP・レベル・本文 |
+| `LOG_START_MESSAGE`      | `String` | `"BATCH MAINTENANCE START"`       | 開始通知                     |
+| `LOG_FINISH_MESSAGE`     | `String` | `"BATCH MAINTENANCE END"`         | 終了通知                     |
 
 ### URLフォーマット系
 
@@ -117,7 +122,7 @@
 | 定数名                         | 型       | 値                                            | 説明                                               |
 |--------------------------------|----------|-----------------------------------------------|----------------------------------------------------|
 | `OTHER_ARGS_MSG`               | `String` | `"The length of the arguments must be 6."`    | 引数不足時のUSAGEメッセージ                        |
-| `OTHER_PAPERMC_EXCEPTION`      | `String` | `"Exception: No official version was found."` | 正式版未検出時の実行時例外メッセージ               |
+| `OTHER_PAPERMC_EXCEPTION`      | `String` | `"No official version was found."`            | 正式版未検出時の実行時例外メッセージ               |
 | `OTHER_TIME_ZONE`              | `String` | `"Asia/Tokyo"`                                | 日時文字列生成に使用するタイムゾーン               |
 | `OTHER_DATE_TIME_FMT`          | `String` | `"yyyyMMddHHmmss"`                            | 日時フォーマット文字列                             |
 | `OTHER_USER_AGENT`             | `String` | `"wakasaba_orchestrator/1.0"`                 | HTTPリクエストのUser-Agent文字列                   |
@@ -125,8 +130,9 @@
 | `OTHER_CHANNEL_EXEC_OPTION`    | `String` | `"exec"`                                      | JSch の `openChannel` に渡すチャンネル種別         |
 | `OTHER_SSH_CONFIG`             | `String` | `"StrictHostKeyChecking"`                     | SSH接続設定キー（known_hostsチェック）             |
 | `OTHER_SSH_CONFIG_VAL`         | `String` | `"no"`                                        | known_hostsチェックを無効化する設定値              |
-| `OTHER_NOT_ALIVE_MSG`          | `String` | `"WARNING: Servers Not Active"`               | 初期疎通不可で全体の保守を開始しない場合の警告ログ |
-| `OTHER_CONNECTION_CHECK`       | `String` | `Checking Connection: %s`                     | 初期疎通確認対象の接続情報                         |
+| `OTHER_IP_LOCALHOST`           | `String` | `"localhost"`                                 | 管理端末のログIP欄                                 |
+| `OTHER_NOT_ALIVE_MSG`          | `String` | `"Servers Not Active"`                        | 初期疎通不可で全体の保守を開始しない場合の警告ログ |
+| `OTHER_CONNECTION_CHECK`       | `String` | `Checking Connection`                         | 初期疎通確認対象の接続情報                         |
 | `OTHER_MOUNT_STATUS_EXCEPTION` | `String` | `The mount status is not normal.`             | マウント状態不一致の実行時例外                     |
 | `SERVER_REBOOT_WAIT_LIMIT`     | `int`    | `600`                                         | 各サーバの再起動後復帰待ち目安（秒）               |
 | `OTHER_REBOOT_EXCEPTION`       | `String` | `The server did not restart successfully: %s` | 復帰待ち超過の例外（接続情報を埋込）               |

@@ -1,6 +1,5 @@
 package com.wks.util;
 
-import com.wks.main.Main;
 import com.wks.parts.WksConstants;
 
 import java.io.BufferedReader;
@@ -8,14 +7,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.List;
 
 public class BashExec {
-    /**
-     * logインスタンス取得
-     */
-    private static final List<String> log = Main.log;
-
     /**
      * updateコマンドの実行
      *
@@ -24,7 +17,7 @@ public class BashExec {
      */
     public static void update() throws IOException, InterruptedException {
         // updateコマンドの実行
-        runCommand(WksConstants.CMD_UPDATE);
+        runCommand(WksConstants.CMD_UPDATE, true);
     }
 
     /**
@@ -35,7 +28,7 @@ public class BashExec {
      */
     public static void upgrade() throws IOException, InterruptedException {
         // upgradeコマンドの実行
-        runCommand(WksConstants.CMD_UPGRADE);
+        runCommand(WksConstants.CMD_UPGRADE, true);
     }
 
     /**
@@ -57,7 +50,7 @@ public class BashExec {
         processBuilder.start();
 
         // logファイルにコマンド追記
-        log.add(String.format(WksConstants.LOG_COMMAND, shutdownCmd));
+        AplLog.getInstance().outCommandLog(WksConstants.OTHER_IP_LOCALHOST, shutdownCmd);
 
         //出力を無視して終了
     }
@@ -65,31 +58,34 @@ public class BashExec {
     /**
      * 1分間待機するコマンドの実行
      *
-     * @throws IOException シェルコマンド実行失敗時
+     * @throws IOException          シェルコマンド実行失敗時
      * @throws InterruptedException シェルコマンド実行失敗時
      */
     public static void waitOneMin() throws IOException, InterruptedException {
-        runCommand(WksConstants.CMD_WAIT_ONE_MIN);
+        runCommand(WksConstants.CMD_WAIT_ONE_MIN, false);
     }
 
     /**
      * 現在のUNIX時間を取得
      *
      * @return UNIX時間
-     * @throws IOException シェルコマンド実行失敗時
+     * @throws IOException          シェルコマンド実行失敗時
      * @throws InterruptedException シェルコマンド実行失敗時
      */
     public static long getNowTime() throws IOException, InterruptedException {
-        return Long.parseLong(runCommand(WksConstants.CMD_GET_TIME)[0]);
+        return Long.parseLong(runCommand(WksConstants.CMD_GET_TIME, false)[0]);
     }
 
     /**
      * 任意のコマンド実行
      *
+     * @param cmd        実行コマンド
+     * @param outLogFlag ログ出力フラグ
+     * @return 出力
      * @throws IOException          シェルコマンド実行失敗時
      * @throws InterruptedException シェルコマンド実行失敗時
      */
-    private static String[] runCommand(String cmd) throws IOException, InterruptedException {
+    private static String[] runCommand(String cmd, boolean outLogFlag) throws IOException, InterruptedException {
         // ProcessBuilderを指定のコマンドで作成
         ProcessBuilder processBuilder =
                 new ProcessBuilder(WksConstants.CMD_SHELL_HEAD, WksConstants.CMD_SHELL_OPTION, cmd);
@@ -104,7 +100,7 @@ public class BashExec {
         BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
 
         // 実行コマンドをログに追加
-        log.add(String.format(WksConstants.LOG_COMMAND, cmd));
+        if (outLogFlag) AplLog.getInstance().outCommandLog(WksConstants.OTHER_IP_LOCALHOST, cmd);
 
         // 出力格納用リスト作成
         ArrayList<String> retList = new ArrayList<>();
@@ -119,7 +115,7 @@ public class BashExec {
                 break;
             }
             // logに追加
-            log.add(line);
+            if (outLogFlag) AplLog.getInstance().outOutputLog(WksConstants.OTHER_IP_LOCALHOST, line);
             // 出力リストに追加
             retList.add(line);
         }
@@ -132,7 +128,7 @@ public class BashExec {
         // 出力用配列を作成
         String[] ret = new String[retList.size()];
         // 全出力に対してループ
-        for (int i = 0; i < ret.length; i++){
+        for (int i = 0; i < ret.length; i++) {
             // 出力用配列にリストの各要素を格納
             ret[i] = retList.get(i);
         }

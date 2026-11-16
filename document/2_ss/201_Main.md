@@ -2,146 +2,69 @@
 
 ## 基本情報
 
-| 項目             | 内容                                                                           |
-|------------------|--------------------------------------------------------------------------------|
-| 完全修飾クラス名 | `com.wks.main.Main`                                                            |
-| ファイル名       | `Main.java`                                                                    |
-| 種別             | class（public）                                                                |
-| 責務             | アプリケーションのエントリポイント。引数検証・処理起動・ログファイル出力を担う |
-| 依存クラス       | `WksWorkFlow`, `WksConstants`                                                  |
+| 項目             | 内容                                                                         |
+|------------------|------------------------------------------------------------------------------|
+| 完全修飾クラス名 | `com.wks.main.Main`                                                          |
+| ファイル名       | `Main.java`                                                                  |
+| 種別             | class（public）                                                              |
+| 責務             | 引数検証・ワークフロー起動・AplLogによる開始/例外/終了ログ受付と出力終了待ち |
+| 依存クラス       | `WksWorkFlow`、`WksConstants`、`AplLog`                                      |
 
 ---
 
 ## フィールド一覧
 
-| フィールド名 | 型             | 修飾子                | 初期値                         | 説明                                                                       |
-|--------------|----------------|-----------------------|--------------------------------|----------------------------------------------------------------------------|
-| `log`        | `List<String>` | `public static final` | `new CopyOnWriteArrayList<>()` | アプリケーション全体で共有するログリスト。他クラスは `Main.log` で参照する |
-
-### フィールド詳細
-
-#### `log`
-
-```java
-public static final List<String> log = new CopyOnWriteArrayList<>();
-```
-
-- アプリケーション実行中に各クラスが書き込むすべてのログ行を格納する。
-- `static final` であるため、クラスロード時に1度だけ初期化されリスト本体は不変参照として各クラスに共有される（リストの中身は可変）。
-- 実行終了後に `outLog()` でファイルへ書き出される。
+なし。ログリストはAplLog内部で保持する。
 
 ---
 
 ## メソッド一覧
 
-| メソッド名    | 戻り値型 | 修飾子           | 説明                                                         |
-|---------------|----------|------------------|--------------------------------------------------------------|
-| `main`        | `void`   | `public static`  | エントリポイント。引数検証・ワークフロー起動・ログ出力を行う |
-| `outLog`      | `void`   | `public static`  | ログリストの内容をファイルに出力する                         |
-| `getDateTime` | `String` | `private static` | 現在日時を `yyyyMMddHHmmss` 形式の文字列で返す               |
+| メソッド名            | 戻り値型 | 修飾子          | 処理                                                       |
+|-----------------------|----------|-----------------|------------------------------------------------------------|
+| `main(String[] args)` | `void`   | `public static` | 6引数検証・開始通知・ワークフロー・ERR記録・終了通知・join |
+
+```java
+public static void main(String[] args) throws IOException, InterruptedException;
+```
 
 ---
 
-## メソッド詳細
-
-### `main(String[] args)`
-
-```java
-public static void main(String[] args) throws IOException;
-```
-
-#### 処理フロー
+## 処理フロー
 
 ```
-args.length == 6 ?
-  Yes:
-    1. log に開始時刻を追記（WksConstants.LOG_START_TIME）
-    2. try 内で WksWorkFlow.execScheduledJob(args) を呼び出す
-       catch (Exception e):
-         a. StringWriter を生成する
-         b. PrintWriter を生成する
-         c. e.printStackTrace(pw) を実行する
-         d. sw.toString() を log に追記する
-    3. log に終了時刻を追記（WksConstants.LOG_END_TIME）
-    4. outLog(ログファイルパス) を呼び出す
-  No:
-    System.out.println(WksConstants.OTHER_ARGS_MSG) を出力して終了
+1. Mainで6引数を検証
+2. AplLog.getInstance(): 初回だけ生成・ファイルオープン・自動start
+3. MainがlocalhostのSYS開始ログを追加
+4. ワークフロー実行。各部品が接続先とレベルを指定して追加
+5. Mainがワークフロー例外を捕捉した場合は例外全体をERRとして追加
+6. 全ログ発行処理の完了後、MainがlocalhostのSYS終了ログを追加
+7. endOfLogOutput(): 受付終了を通知（この呼び出しだけでは完了待ちしない）
+8. AplLogは受付済みログを排出し、PrintStreamをcloseして終了
+9. Mainはjoin()で出力スレッドの終了を待って復帰
 ```
 
-#### 引数
-
-| 引数名 | 型         | 説明                                                                |
-|--------|------------|---------------------------------------------------------------------|
-| `args` | `String[]` | コマンドライン引数。6要素必須（各要素はサーバ接続情報ファイルパス） |
-
-#### 例外
-
-| 例外クラス    | 発生条件                                        |
-|---------------|-------------------------------------------------|
-| `IOException` | `outLog()` によるログファイル生成・書き込み失敗 |
-
-`WksWorkFlow.execScheduledJob` から送出される `IOException`・`InterruptedException`・`JSchException` および非検査例外は、
-`catch (Exception e)` で捕捉してスタックトレースをログへ追記する。
+引数不正時は `System.out.println(OTHER_ARGS_MSG)` のみで終了する。
+開始メッセージは `BATCH MAINTENANCE START`、終了メッセージは `BATCH MAINTENANCE END`。
+Mainの公開ログフィールド・一括ファイル出力・日時生成は廃止し、AplLogへ責務を移す。
 
 ---
 
-### `outLog(String path)`
+## 例外
 
-```java
-public static void outLog(String path) throws IOException;
-```
+| 箇所            | 例外                                 | 扱い                                                       |
+|-----------------|--------------------------------------|------------------------------------------------------------|
+| 初回getInstance | FileNotFoundException（IOException） | 開始ログ追加前の失敗。ワークフロー用catchの外で上位へ伝播  |
+| ワークフロー    | Exception                            | AplLog.outExceptionLog(localhost, e)へ渡し、終了処理へ進む |
+| AplLog.join     | InterruptedException                 | mainのthrowsで上位へ伝播                                   |
 
-#### 処理フロー
-
-```
-1. PrintStream を指定パスで生成
-2. log の各要素を1行ずつ println で書き出す
-3. PrintStream をクローズ
-```
-
-#### 引数
-
-| 引数名 | 型       | 説明                                                                              |
-|--------|----------|-----------------------------------------------------------------------------------|
-| `path` | `String` | 出力先ファイルパス（`WksConstants.PATH_EXEC_LOG` にタイムスタンプを埋め込んだ値） |
-
-#### 例外
-
-| 例外クラス    | 発生条件                               |
-|---------------|----------------------------------------|
-| `IOException` | 指定パスへのファイル生成・書き込み失敗 |
-
----
-
-### `getDateTime()`
-
-```java
-private static String getDateTime();
-```
-
-#### 処理フロー
-
-```
-1. DateTimeFormatter を WksConstants.OTHER_DATE_TIME_FMT（"yyyyMMddHHmmss"）で生成
-2. ZonedDateTime.now(ZoneId.of("Asia/Tokyo")) でタイムゾーン付き現在日時を取得
-3. フォーマットして文字列で返却
-```
-
-#### 戻り値
-
-| 型       | 説明                                                                     |
-|----------|--------------------------------------------------------------------------|
-| `String` | 現在日時を `yyyyMMddHHmmss` 形式に変換した文字列（例：`20240101120000`） |
+Errorは捕捉対象外であり、正常な終了処理・ログ完了を保証しない。
 
 ---
 
 ## 設計上の注意点
 
-- 共有ログの宣言型は `List<String>`、実体は `Main` が生成する `CopyOnWriteArrayList<String>` とする。各クラスは同一インスタンスを参照する。
-- 並列更新中の `add`・`addAll` は安全に実行できるが、コマンド行と標準出力を一体で排他しないため、サーバ間のログは混在する。サーバ別の順序・まとまりは保証しない。
-
-- `log` を `public static final` にしているため、各クラスから `Main.log` として直接参照・追記が可能。シングルトン的なグローバルログバッファとして機能している。
-- ログファイルのパスには開始時刻と異なるタイムスタンプ（終了後の `getDateTime()` 呼出し）が使われるため、ファイル名は終了時刻を示す。
-- ワークフロー実行中の例外は `catch (Exception e)` で捕捉するため、例外発生後も終了時刻記録とログファイル出力へ進む。
-- スタックトレースは `StringWriter` と `PrintWriter` を使用して文字列化し、1要素として `log` に追加する。
-- `outLog()` 自身が送出する `IOException` は捕捉されず、JVMへ伝播する。
+- ログのファイル名はAplLog初回生成時刻で決まり、バッチ終了時刻ではない。
+- 全ログ発行スレッドの完了後に最終ログを追加する通常経路を前提とする。
+- endOfLogOutputは非同期の終了通知であり、ファイルクローズの完了確認にはjoinが必要。
+- ファイル出力先の存在と権限を事前に用意する。詳細は同階層のAplLog設計書を参照。
