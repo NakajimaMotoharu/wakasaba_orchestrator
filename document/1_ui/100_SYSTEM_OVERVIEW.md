@@ -35,7 +35,7 @@
 ```
 com.wks
 ├── main
-│   └── Main.java                   # エントリポイント・グローバルログ管理・ログファイル出力
+│   └── Main.java                   # エントリポイント・AplLog初期化・終了待機
 ├── workflow
 │   └── WksWorkFlow.java            # 全サーバへの処理シーケンス定義
 ├── cmd
@@ -43,6 +43,7 @@ com.wks
 ├── papermc
 │   └── PaperUrlGen.java            # PaperMC / Pl3xMap API レスポンスJSON解析
 ├── util
+│   ├── AplLog.java               # 単一インスタンス・ログ受付・非同期ファイル出力
 │   ├── ConnectionInformation.java  # サーバ接続情報の保持・ファイル読込み（record）
 │   ├── SshExec.java                # JSch を用いた SSH セッション管理・コマンド実行
 │   ├── BashExec.java               # ProcessBuilder を用いたローカル Bash コマンド実行
@@ -55,18 +56,19 @@ com.wks
 
 ## クラス一覧
 
-| クラス名                | パッケージ         | 種別                                 | 役割                                                            |
-|-------------------------|--------------------|--------------------------------------|-----------------------------------------------------------------|
-| `Main`                  | `com.wks.main`     | class                                | エントリポイント。引数検証・ワークフロー起動・ログファイル出力  |
-| `WksWorkFlow`           | `com.wks.workflow` | class                                | 6台のリモートサーバ＋自サーバへの処理シーケンスを順次実行       |
-| `UpdateThread`          | `com.wks.workflow` | class（package-private、Thread継承） | WksWorkFlow.java内。サーバ1台のupdate・upgradeと例外保持        |
-| `SshCommand`            | `com.wks.cmd`      | class                                | SSH経由コマンド実行の業務ロジックラッパー。サーバ応答待機を含む |
-| `PaperUrlGen`           | `com.wks.papermc`  | class                                | PaperMC API・Modrinth API のJSONレスポンス解析                  |
-| `ConnectionInformation` | `com.wks.util`     | record                               | SSH接続情報（host/port/user/key）の保持とファイル読込み         |
-| `SshExec`               | `com.wks.util`     | class                                | JSch を使用した SSH セッション確立・コマンド実行・疎通確認      |
-| `BashExec`              | `com.wks.util`     | class                                | ProcessBuilder によるローカル Bash コマンド実行                 |
-| `Curl`                  | `com.wks.util`     | class                                | Java 標準 HttpClient による HTTP GET リクエスト                 |
-| `WksConstants`          | `com.wks.parts`    | class                                | アプリケーション全体で使用する定数の一元管理                    |
+| クラス名                 | パッケージ         | 種別                                 | 役割                                                            |
+|--------------------------|--------------------|--------------------------------------|-----------------------------------------------------------------|
+| `Main`                   | `com.wks.main`     | class                                | エントリポイント。引数検証・ワークフロー起動・ログ終了待ち      |
+| `WksWorkFlow`            | `com.wks.workflow` | class                                | 6台のリモートサーバ＋自サーバへの処理シーケンスを順次実行       |
+| [AplLog](110_APL_LOG.md) | `com.wks.util`     | class（Thread継承）                  | ログ受付・例外整形・随時ファイル出力                            |
+| `UpdateThread`           | `com.wks.workflow` | class（package-private、Thread継承） | WksWorkFlow.java内。サーバ1台のupdate・upgradeと例外保持        |
+| `SshCommand`             | `com.wks.cmd`      | class                                | SSH経由コマンド実行の業務ロジックラッパー。サーバ応答待機を含む |
+| `PaperUrlGen`            | `com.wks.papermc`  | class                                | PaperMC API・Modrinth API のJSONレスポンス解析                  |
+| `ConnectionInformation`  | `com.wks.util`     | record                               | SSH接続情報（host/port/user/key）の保持とファイル読込み         |
+| `SshExec`                | `com.wks.util`     | class                                | JSch を使用した SSH セッション確立・コマンド実行・疎通確認      |
+| `BashExec`               | `com.wks.util`     | class                                | ProcessBuilder によるローカル Bash コマンド実行                 |
+| `Curl`                   | `com.wks.util`     | class                                | Java 標準 HttpClient による HTTP GET リクエスト                 |
+| `WksConstants`           | `com.wks.parts`    | class                                | アプリケーション全体で使用する定数の一元管理                    |
 
 ---
 
@@ -74,26 +76,23 @@ com.wks
 
 ```
 Main
-├── WksWorkFlow
-│   ├── UpdateThread（WksWorkFlow.java内）
-│   │   └── SshCommand
-│   ├── SshCommand
-│   │   ├── SshExec
-│   │   │   └── ConnectionInformation
-│   │   ├── BashExec
-│   │   ├── Curl
-│   │   ├── PaperUrlGen
-│   │   │   └── WksConstants
-│   │   └── WksConstants
-│   ├── BashExec
-│   │   └── WksConstants
-│   ├── ConnectionInformation
-│   │   └── WksConstants
+├── AplLog（ファイル受付・出力・終了待機）
 │   └── WksConstants
-└── WksConstants
+└── WksWorkFlow
+    ├── AplLog
+    ├── UpdateThread → SshCommand
+    ├── SshCommand
+    │   ├── AplLog
+    │   ├── SshExec → ConnectionInformation / WksConstants
+    │   ├── BashExec → AplLog / WksConstants
+    │   ├── Curl
+    │   └── PaperUrlGen → WksConstants
+    ├── BashExec
+    ├── ConnectionInformation
+    └── WksConstants
 ```
 
-- `Main.log`（`public static final List<String>`）を起点として、全クラスが同一ログリストを共有参照する。
+- 各部品はAplLog.getInstance()が返す同一のログ受付部品を利用する。
 
 ---
 
@@ -110,12 +109,15 @@ Main
 
 ## 処理フロー概要
 
+- 初期疎通確認前は対象ci.host()のAPLでChecking Connectionを記録する。疎通不可の全体中止はlocalhostのERRでServers Not
+  Activeを記録する。区切りログは廃止する。
+
 Mainで6引数を検証し、開始ログを記録して次のワークフローを呼び出す。
 
 ```
 1. setConnectionInformation(servers): 6ファイルを読み込み cis[0]～cis[5] を設定
 2. isAllAlive(cis): 引数順に確認前ログを追記しSSH疎通確認
-   最初の疎通不可 → WARNING: Servers Not Active → 保守せずMainへ復帰
+   最初の疎通不可 → Servers Not Active → 保守せずMainへ復帰
 3. systemStop(cis): PaperMC停止 → Schubert停止 → 管理端末で60秒待機（1回）
 4. allUMount(cis): サーバ0～4の /nas・/share を解除し、findmntの出力がないことを確認
 5. allUpdate(cis): サーバ0～5を並列更新（各台 update → upgrade）
@@ -127,9 +129,9 @@ Mainで6引数を検証し、開始ログを記録して次のワークフロー
 10. systemPreSetup(cis): サーバ1でバックアップ → PaperMC/Pl3xMap取得 → SHA検証・配置
     wgetPaperMcの末尾で、管理端末のpapermc_version.txtを更新
 11. systemStart(cis): PaperMC起動 → Schubert起動
-12. 管理端末: 区切りログ → BashExec.update() → upgrade() → shutdown()
-13. Mainで終了時刻記録・ログファイル出力
-例外発生: 後続工程中止 → Mainでスタックトレース・終了ログ出力 → 手動復旧
+12. 管理端末: BashExec.update() → upgrade() → shutdown()
+13. MainでSYS終了ログ追加 → endOfLogOutput → AplLog.join
+例外発生: 後続工程中止 → MainでERR・SYS終了ログ追加 → 受付終了・join → 手動復旧
 ```
 
 | インデックス | 定数              | 役割             | 保守対象                                                           |
@@ -144,8 +146,6 @@ Mainで6引数を検証し、開始ログを記録して次のワークフロー
 
 - 工程の順序は維持し、OS更新工程のみサーバ間を並列化する。共有操作・再起動・復帰確認・アプリ操作は従来どおり直列とする。
 - 全機疎通確認はサービス停止前に行い、最初の失敗で中止する。管理端末のOS更新も開始しない。
-- 初期疎通確認前に `Checking Connection: %s`（host・port・user）を記録する。リモート各台の `LOG_SPLIT`
-  は記録せず、管理端末の区切りのみ維持する。
 - NAS以外のリモート5台には `/nas`・`/share` の設定、`findmnt` と必要な権限があることを前提とする。管理端末は共有操作対象外。
 - 両サービス停止後の固定待機は管理端末で1回60秒のみ。停止状態の動的確認は行わない。
 - 全台再起動指示後も管理端末で1回60秒待機し、その後SSH復帰を待つ。boot_idは確認しない。
@@ -168,8 +168,8 @@ Mainで6引数を検証し、開始ログを記録して次のワークフロー
 - 更新失敗時もほかの開始済みタスクはキャンセルせず、終了を待つ。複数の失敗は集約せず、引数順で最初に検出した例外を再送出する。
 
 - 各クラスの業務メソッドは検査例外を `throws` で `Main.main` まで委譲する。個別の回復処理は行わない。
-- `Main.main` はワークフロー実行中の `Exception` を捕捉し、スタックトレースをログへ追記した後、終了時刻記録とログファイル出力へ進む。
-- `Main.outLog` が送出する `IOException` は捕捉せずJVMへ伝播する。
+- Main.mainはワークフローのExceptionをAplLogへ渡し、SYS終了ログ追加・終了通知・joinを行う。
+- 初回AplLogオープン失敗はIOException、join割り込みはInterruptedExceptionとしてMainから上位へ伝播する。
 - PaperMCの正式版未検出時は `RuntimeException`、バージョンファイルのオープン失敗時は `FileNotFoundException`（
   `IOException`）が発生し、ワークフローの後続処理を中断して `Main.main` でログへ記録する。
 - `UpdateThread` は例外を一時保持し、全スレッド終了後に親へ再送出する。例外を回復扱いにはしない。
@@ -189,27 +189,40 @@ Mainで6引数を検証し、開始ログを記録して次のワークフロー
 
 ## ログ設計
 
-- 共有ログの宣言型は `List<String>`、実体は `Main` が生成する `CopyOnWriteArrayList<String>` とする。各クラスは同一インスタンスを参照する。
-- 並列更新中の `add`・`addAll` は安全に実行できるが、コマンド行と標準出力を一体で排他しないため、サーバ間のログは混在する。サーバ別の順序・まとまりは保証しない。
+| 項目             | 内容                                                                            |
+|------------------|---------------------------------------------------------------------------------|
+| 書式             | `[日時 サーバIP ログレベル]: 内容` ＋ LF                                        |
+| 日時             | 受付時の管理端末時刻。`yyyyMMddHHmmss`、Asia/Tokyo                              |
+| サーバIP欄       | SSH操作対象の `ci.host()`。ホスト名の場合はそのまま。ローカル処理は `localhost` |
+| レベル           | `SYS`・`APL`・`CMD`・`OUT`・`ERR`                                               |
+| CMD本文          | `$ ` ＋コマンド                                                                 |
+| 出力先           | 管理端末の `/home/mini/wakasaba_orchestrator/log/log_%s.txt`                    |
+| ファイル名の日時 | AplLog初回生成時の日時。終了時刻ではない                                        |
+| 文字コード・更新 | `PrintStream(String)` の既定値。新規作成または上書き                            |
+| 書き出し         | 受付済みログを専用スレッドで随時出力。リスト排出後は1秒休止                     |
+| 終了             | 最終ログ追加→終了通知→join。残ログ排出後にclose                                 |
 
-- `Main.log`（`public static final List<String>`）を全クラス共通のグローバルログバッファとして使用する。
-- 各クラスは `Main.log` への参照を `private static final List<String> log = Main.log` として保持し、実行中に随時追記する。
-- ワークフローの正常・異常終了後、`Main.outLog()` が `log` の全行をファイルへ書き出す。
-- ログファイルのパスは `WksConstants.PATH_EXEC_LOG`（`/home/mini/wakasaba_orchestrator/log/log_%s.txt`
-  ）に終了時刻タイムスタンプを埋め込んだ値となる。
-- ワークフロー実行中に例外が発生した場合、スタックトレースと終了時刻を途中までの実行ログへ追記してファイル出力する。
+- ログの所有者はAplLogのみとし、各部品はgetInstance経由で追加する。Mainの公開ログリスト・終了時一括出力APIは使用しない。
+- 並列更新中も同一インスタンスへ追加する。各行に接続先を付けるが、複数行を一括排他しないためサーバ間のログは混在する。
+- 受付済みログの随時書き出しであり、すべてのコマンド出力の逐次取得や厳密な即時性を保証するものではない。
+- 正常な終了順序は全ログ発行処理の完了→最終ログ追加→endOfLogOutput→join。終了通知後の追加は受け付けない。
+- ログディレクトリの存在、作成・上書き権限と十分な容量を前提とする。親ディレクトリの作成とPrintStreamの書き込みエラーフラグ検査は行わない。
 
-### ログに記録される内容
+### 初期化・終了順序
 
-| 種別                   | フォーマット例                                                   |
-|------------------------|------------------------------------------------------------------|
-| バッチ開始時刻         | `Batch start time: 20240101120000`                               |
-| バッチ終了時刻         | `Batch end time: 20240101130000`                                 |
-| 初期疎通確認対象       | `Checking Connection: {host: "x.x.x.x", port: 22, user: "mini"}` |
-| 自サーバ処理開始区切り | `/* --------Job start: this server-------- */`                   |
-| 実行コマンド           | `$ sudo apt update`                                              |
-| コマンド標準出力       | （コマンド実行結果の各行）                                       |
-| 例外情報               | ワークフロー実行中に捕捉した例外のスタックトレース               |
+```
+1. Mainで6引数を検証
+2. AplLog.getInstance(): 初回だけ生成・ファイルオープン・自動start
+3. MainがlocalhostのSYS開始ログを追加
+4. ワークフロー実行。各部品が接続先とレベルを指定して追加
+5. Mainがワークフロー例外を捕捉した場合は例外全体をERRとして追加
+6. 全ログ発行処理の完了後、MainがlocalhostのSYS終了ログを追加
+7. endOfLogOutput(): 受付終了を通知（この呼び出しだけでは完了待ちしない）
+8. AplLogは受付済みログを排出し、PrintStreamをcloseして終了
+9. Mainはjoin()で出力スレッドの終了を待って復帰
+```
+
+詳細は [AplLog](110_APL_LOG.md) を参照。
 
 ---
 
@@ -217,7 +230,7 @@ Mainで6引数を検証し、開始ログを記録して次のワークフロー
 
 | ファイル          | 管理端末上の出力先                                     | 内容・更新方式                                                                     |
 |-------------------|--------------------------------------------------------|------------------------------------------------------------------------------------|
-| 実行ログ          | `/home/mini/wakasaba_orchestrator/log/log_%s.txt`      | 終了時刻ごとの実行ログ。`PATH_WAKASABA_EXEC + "log/log_%s.txt"` から構成           |
+| 実行ログ          | `/home/mini/wakasaba_orchestrator/log/log_%s.txt`      | 初回生成時刻のファイルへAplLogが随時出力                                           |
 | PaperMCバージョン | `/home/mini/wakasaba_orchestrator/papermc_version.txt` | 取得対象のバージョン文字列のみ。既定文字コード、末尾改行なしで新規作成または上書き |
 
 PaperMCはAPI応答順に系列・候補を探索し、ハイフン（`-`
@@ -257,3 +270,9 @@ PaperMCはAPI応答順に系列・候補を探索し、ハイフン（`-`
 - Java `ProcessBuilder` を使用して `sh -c <コマンド>` の形式で実行する。
 - `update` / `upgrade` / `waitOneMin` / `getNowTime` はプロセス終了を `waitFor()` で同期待機する。
 - `shutdown` のみバックグラウンド実行（`waitFor()` 呼出しなし）とし、60秒遅延後に再起動する。
+
+## 備考（将来対応）
+
+- 将来対応1（ローカル大量出力時の停止リスク）：BashExecは終了待ちの後に標準出力を読み取るため、パイプが満杯になると子プロセスとJava側が相互待ちになる可能性がある。現在の運用では許容し、今回の変更では未解消とする。
+- 将来対応2（SSH標準出力の逐次ログ化）：SshExecは標準出力を配列に蓄積し、コマンド終了後にSshCommandからAplLogへ渡す。実行中の進捗は記録しない現行仕様を許容し、将来対応1とあわせて見直す。
+- 上記2件は解消済みではなく、明示的に保留した事項である。

@@ -27,19 +27,19 @@
 
 ### ファイルパス系
 
-| 定数名                           | 値                                                     | 説明                                                |
-|----------------------------------|--------------------------------------------------------|-----------------------------------------------------|
-| `PATH_WAKASABA_EXEC`             | `/home/mini/wakasaba_orchestrator/`                    | 管理端末上の共通ディレクトリ                        |
-| `PATH_EXEC_LOG`                  | `/home/mini/wakasaba_orchestrator/log/log_%s.txt`      | ログファイル出力先パス。`%s` に日時文字列を埋め込む |
-| `PATH_PAPERMC_VERSION`           | `/home/mini/wakasaba_orchestrator/papermc_version.txt` | 管理端末上のPaperMCバージョンファイル出力先         |
-| `PATH_DL_PAPERMC`                | `/home/mini/download/paper.jar`                        | PaperMC JAR のダウンロード先パス                    |
-| `PATH_DL_PL3XMAP`                | `/home/mini/download/pl3xmap.jar`                      | Pl3xMap JAR のダウンロード先パス                    |
-| `PATH_PROD_PAPERMC`              | `/home/mini/mcs/prod/paper.jar`                        | PaperMC JAR 本番配置先パス                          |
-| `PATH_PROD_PL3XMAP`              | `/home/mini/mcs/prod/plugins/pl3xmap.jar`              | Pl3xMap JAR 本番配置先パス                          |
-| `PATH_BACKUP_SHELL`              | `/home/mini/mcs/shell/backup.sh`                       | バックアップシェルスクリプトのパス                  |
-| `PATH_PROD_SCHUBERT_APP`         | `/home/mini/schubert/`                                 | Schubertアプリ格納ディレクトリ                      |
-| `PATH_PROD_SCHUBERT_START_SHELL` | `/home/mini/schubert/start_schubert.sh`                | Schubert起動シェルパス                              |
-| `PATH_PROD_SCHUBERT_STOP_SHELL`  | `/home/mini/schubert/stop_schubert.sh`                 | Schubert停止シェルパス                              |
+| 定数名                           | 値                                                     | 説明                                                        |
+|----------------------------------|--------------------------------------------------------|-------------------------------------------------------------|
+| `PATH_WAKASABA_EXEC`             | `/home/mini/wakasaba_orchestrator/`                    | 管理端末上の共通ディレクトリ                                |
+| `PATH_EXEC_LOG`                  | `/home/mini/wakasaba_orchestrator/log/log_%s.txt`      | ログファイル出力先パス。`%s` にAplLog初回生成時刻を埋め込む |
+| `PATH_PAPERMC_VERSION`           | `/home/mini/wakasaba_orchestrator/papermc_version.txt` | 管理端末上のPaperMCバージョンファイル出力先                 |
+| `PATH_DL_PAPERMC`                | `/home/mini/download/paper.jar`                        | PaperMC JAR のダウンロード先パス                            |
+| `PATH_DL_PL3XMAP`                | `/home/mini/download/pl3xmap.jar`                      | Pl3xMap JAR のダウンロード先パス                            |
+| `PATH_PROD_PAPERMC`              | `/home/mini/mcs/prod/paper.jar`                        | PaperMC JAR 本番配置先パス                                  |
+| `PATH_PROD_PL3XMAP`              | `/home/mini/mcs/prod/plugins/pl3xmap.jar`              | Pl3xMap JAR 本番配置先パス                                  |
+| `PATH_BACKUP_SHELL`              | `/home/mini/mcs/shell/backup.sh`                       | バックアップシェルスクリプトのパス                          |
+| `PATH_PROD_SCHUBERT_APP`         | `/home/mini/schubert/`                                 | Schubertアプリ格納ディレクトリ                              |
+| `PATH_PROD_SCHUBERT_START_SHELL` | `/home/mini/schubert/start_schubert.sh`                | Schubert起動シェルパス                                      |
+| `PATH_PROD_SCHUBERT_STOP_SHELL`  | `/home/mini/schubert/stop_schubert.sh`                 | Schubert停止シェルパス                                      |
 
 ---
 
@@ -80,15 +80,18 @@
 
 ### ログメッセージ系
 
-| 定数名            | 値                                    | 説明                                   |
-|-------------------|---------------------------------------|----------------------------------------|
-| `LOG_START_TIME`  | `Batch start time: %s`                | バッチ開始時刻ログフォーマット         |
-| `LOG_END_TIME`    | `Batch end time: %s`                  | バッチ終了時刻ログフォーマット         |
-| `LOG_COMMAND`     | `$ %s`                                | 実行コマンドのログフォーマット         |
-| `LOG_SPLIT`       | `/* --------Job start: %s-------- */` | サーバ処理開始の区切りログフォーマット |
-| `LOG_THIS_SERVER` | `this server`                         | 自サーバ識別用文字列                   |
-
----
+| 定数名                   | 値                        | 説明                         |
+|--------------------------|---------------------------|------------------------------|
+| `LOG_LEVEL_SYSTEM`       | `SYS`                     | システムログ                 |
+| `LOG_LEVEL_APPLICATIONS` | `APL`                     | アプリログ                   |
+| `LOG_LEVEL_COMMAND`      | `CMD`                     | コマンドログ                 |
+| `LOG_LEVEL_EXCEPTION`    | `ERR`                     | 例外・異常メッセージ         |
+| `LOG_LEVEL_OUTPUT`       | `OUT`                     | 標準出力ログ                 |
+| `LOG_PARTS_DOL`          | `$ `                      | CMD本文接頭辞                |
+| `LOG_PARTS_LF`           | `\n`                      | LF改行                       |
+| `LOG_FORMAT`             | `[%s %s %s]: %s ＋ LF`    | 日時・サーバIP・レベル・本文 |
+| `LOG_START_MESSAGE`      | `BATCH MAINTENANCE START` | 開始通知                     |
+| `LOG_FINISH_MESSAGE`     | `BATCH MAINTENANCE END`   | 終了通知                     |
 
 ### URL フォーマット系
 
@@ -127,7 +130,7 @@
 | 定数名                         | 値                                            | 説明                                               |
 |--------------------------------|-----------------------------------------------|----------------------------------------------------|
 | `OTHER_ARGS_MSG`               | `The length of the arguments must be 6.`      | 引数不足時の USAGE メッセージ                      |
-| `OTHER_PAPERMC_EXCEPTION`      | `Exception: No official version was found.`   | 正式版未検出時の実行時例外メッセージ               |
+| `OTHER_PAPERMC_EXCEPTION`      | `No official version was found.`              | 正式版未検出時の実行時例外メッセージ               |
 | `OTHER_TIME_ZONE`              | `Asia/Tokyo`                                  | 日時文字列生成に使用するタイムゾーン               |
 | `OTHER_DATE_TIME_FMT`          | `yyyyMMddHHmmss`                              | 日時フォーマット文字列                             |
 | `OTHER_USER_AGENT`             | `wakasaba_orchestrator/1.0`                   | HTTP リクエストの User-Agent 文字列                |
@@ -135,8 +138,9 @@
 | `OTHER_CHANNEL_EXEC_OPTION`    | `exec`                                        | JSch の `openChannel` に渡すチャンネル種別         |
 | `OTHER_SSH_CONFIG`             | `StrictHostKeyChecking`                       | SSH 接続設定キー（known_hosts チェック）           |
 | `OTHER_SSH_CONFIG_VAL`         | `no`                                          | known_hosts チェックを無効化する設定値             |
-| `OTHER_NOT_ALIVE_MSG`          | `WARNING: Servers Not Active`                 | 初期疎通不可で全体の保守を開始しない場合の警告ログ |
-| `OTHER_CONNECTION_CHECK`       | `Checking Connection: %s`                     | 初期疎通確認対象の接続情報                         |
+| `OTHER_IP_LOCALHOST`           | `localhost`                                   | 管理端末のログIP欄                                 |
+| `OTHER_NOT_ALIVE_MSG`          | `Servers Not Active`                          | 初期疎通不可で全体の保守を開始しない場合の警告ログ |
+| `OTHER_CONNECTION_CHECK`       | `Checking Connection`                         | 初期疎通確認対象の接続情報                         |
 | `OTHER_MOUNT_STATUS_EXCEPTION` | `The mount status is not normal.`             | マウント状態不一致の実行時例外                     |
 | `SERVER_REBOOT_WAIT_LIMIT`     | `600`                                         | 各サーバの再起動後復帰待ち目安（秒）               |
 | `OTHER_REBOOT_EXCEPTION`       | `The server did not restart successfully: %s` | 復帰待ち超過の例外（接続情報を埋込）               |

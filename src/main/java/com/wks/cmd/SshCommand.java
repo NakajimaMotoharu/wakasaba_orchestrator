@@ -1,29 +1,17 @@
 package com.wks.cmd;
 
 import com.jcraft.jsch.JSchException;
-import com.wks.main.Main;
 import com.wks.papermc.PaperUrlGen;
 import com.wks.parts.WksConstants;
-import com.wks.util.BashExec;
-import com.wks.util.ConnectionInformation;
-import com.wks.util.Curl;
-import com.wks.util.SshExec;
+import com.wks.util.*;
 
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * SSHコマンドの実行を行うラッパークラス
  */
 public class SshCommand {
-    /**
-     * logインスタンス取得
-     */
-    private static final List<String> log = Main.log;
-
     /**
      * updateコマンドの実行
      *
@@ -148,14 +136,14 @@ public class SshCommand {
         // SSH実行インスタンスにコマンド設定
         SshExec sshExec = new SshExec(ci, cmd);
 
+        // 実行コマンドをlogに出力
+        AplLog.getInstance().outCommandLog(ci.host(), cmd);
+
         // コマンド実行
         String[] ret = sshExec.execute();
 
-        // 実行コマンドをlogに出力
-        log.add(String.format(WksConstants.LOG_COMMAND, cmd));
-
         // 返り値をログに追加
-        log.addAll(Arrays.asList(ret));
+        AplLog.getInstance().outOutputLog(ci.host(), ret);
 
         // SHA256検証(正常ファイルならファイル移動実行)
         if (ret[0].substring(0, 64).equals(expectedSHA256)) {
@@ -167,14 +155,14 @@ public class SshCommand {
             // SSH実行インスタンスにコマンド設定
             sshExec = new SshExec(ci, cmd);
 
+            // 実行コマンドをlogに出力
+            AplLog.getInstance().outCommandLog(ci.host(), cmd);
+
             // コマンド実行
             ret = sshExec.execute();
 
-            // 実行コマンドをlogに出力
-            log.add(String.format(WksConstants.LOG_COMMAND, cmd));
-
             // 返り値をログに追加
-            log.addAll(Arrays.asList(ret));
+            AplLog.getInstance().outOutputLog(ci.host(), ret);
 
             // Active待機
             waitForBecomeActive(ci);
@@ -184,14 +172,14 @@ public class SshCommand {
             // SSH実行インスタンスにコマンド設定
             sshExec = new SshExec(ci, cmd);
 
+            // 実行コマンドをlogに出力
+            AplLog.getInstance().outCommandLog(ci.host(), cmd);
+
             // コマンド実行
             ret = sshExec.execute();
 
-            // 実行コマンドをlogに出力
-            log.add(String.format(WksConstants.LOG_COMMAND, cmd));
-
             // 返り値をログに追加
-            log.addAll(Arrays.asList(ret));
+            AplLog.getInstance().outOutputLog(ci.host(), ret);
         }
 
         // Active待機
@@ -202,14 +190,14 @@ public class SshCommand {
         // SSH実行インスタンスにコマンド設定
         sshExec = new SshExec(ci, cmd);
 
+        // 実行コマンドをlogに出力
+        AplLog.getInstance().outCommandLog(ci.host(), cmd);
+
         // コマンド実行
         ret = sshExec.execute();
 
-        // 実行コマンドをlogに出力
-        log.add(String.format(WksConstants.LOG_COMMAND, cmd));
-
         // 返り値をログに追加
-        log.addAll(Arrays.asList(ret));
+        AplLog.getInstance().outOutputLog(ci.host(), ret);
 
         // Pl3xMapの最新バージョンが一致時実行
         if (expectedSHA512 != null) {
@@ -221,14 +209,14 @@ public class SshCommand {
             // SSH実行インスタンスにコマンド設定
             sshExec = new SshExec(ci, cmd);
 
+            // 実行コマンドをlogに出力
+            AplLog.getInstance().outCommandLog(ci.host(), cmd);
+
             // コマンド実行
             ret = sshExec.execute();
 
-            // 実行コマンドをlogに出力
-            log.add(String.format(WksConstants.LOG_COMMAND, cmd));
-
             // 返り値をログに追加
-            log.addAll(Arrays.asList(ret));
+            AplLog.getInstance().outOutputLog(ci.host(), ret);
 
             // SHA512検証(正常ファイルならファイル移動実行)
             if (ret[0].substring(0, 128).equals(expectedSHA512)) {
@@ -240,14 +228,14 @@ public class SshCommand {
                 // SSH実行インスタンスにコマンド設定
                 sshExec = new SshExec(ci, cmd);
 
+                // 実行コマンドをlogに出力
+                AplLog.getInstance().outCommandLog(ci.host(), cmd);
+
                 // コマンド実行
                 ret = sshExec.execute();
 
-                // 実行コマンドをlogに出力
-                log.add(String.format(WksConstants.LOG_COMMAND, cmd));
-
                 // 返り値をログに追加
-                log.addAll(Arrays.asList(ret));
+                AplLog.getInstance().outOutputLog(ci.host(), ret);
             }
         }
 
@@ -321,7 +309,7 @@ public class SshCommand {
     /**
      * 任意のコマンド実行
      *
-     * @param ci サーバ情報
+     * @param ci  サーバ情報
      * @param cmd 実行コマンド
      * @return 応答
      * @throws JSchException        SSHコマンド実行に失敗
@@ -335,14 +323,14 @@ public class SshCommand {
         // コマンド記述
         SshExec sshExec = new SshExec(ci, cmd);
 
+        // 実行コマンドをlogに出力
+        AplLog.getInstance().outCommandLog(ci.host(), cmd);
+
         // コマンド実行
         String[] ret = sshExec.execute();
 
-        // 実行コマンドをlogに出力
-        log.add(String.format(WksConstants.LOG_COMMAND, cmd));
-
         // 返り値をログに追加
-        log.addAll(Arrays.asList(ret));
+        AplLog.getInstance().outOutputLog(ci.host(), ret);
 
         // 返り値を返却
         return ret;
@@ -354,7 +342,7 @@ public class SshCommand {
      * @param ci サーバ情報
      * @throws JSchException        SSHコマンド実行に失敗
      * @throws InterruptedException SSHコマンド実行に失敗
-     * @throws IOException Bashコマンド実行に失敗
+     * @throws IOException          Bashコマンド実行に失敗
      */
     public static void waitForBecomeActive(ConnectionInformation ci, int limit) throws JSchException, InterruptedException, IOException {
         // 現在のUNIX時間を取得
@@ -366,7 +354,7 @@ public class SshCommand {
         // Activeになるまでループ
         while (!sshExec.isAlive()) {
             // 待機時間が設定上限をオーバした場合
-            if (startUnixTime + limit < BashExec.getNowTime()){
+            if (startUnixTime + limit < BashExec.getNowTime()) {
                 throw new RuntimeException(String.format(WksConstants.OTHER_REBOOT_EXCEPTION, ci.toString()));
             }
             // Activeでなければ1秒待機
@@ -380,7 +368,7 @@ public class SshCommand {
      * @param ci サーバ情報
      * @throws JSchException        SSHコマンド実行に失敗
      * @throws InterruptedException SSHコマンド実行に失敗
-     * @throws IOException SSHコマンド実行に失敗
+     * @throws IOException          SSHコマンド実行に失敗
      */
     public static void waitForBecomeActive(ConnectionInformation ci) throws JSchException, InterruptedException, IOException {
         waitForBecomeActive(ci, Integer.MAX_VALUE);
@@ -414,12 +402,12 @@ public class SshCommand {
         runCommand(ci, WksConstants.CMD_MOUNT_SHARE);
 
         // nasのマウント状態確認
-        if (runCommand(ci, WksConstants.CMD_MOUNT_STATUS_NAS).length == 0){
+        if (runCommand(ci, WksConstants.CMD_MOUNT_STATUS_NAS).length == 0) {
             // マウント状態になっていなければ例外を出力
             throw new RuntimeException(WksConstants.OTHER_MOUNT_STATUS_EXCEPTION);
         }
         // shareのマウント状態確認
-        if (runCommand(ci, WksConstants.CMD_MOUNT_STATUS_SHARE).length == 0){
+        if (runCommand(ci, WksConstants.CMD_MOUNT_STATUS_SHARE).length == 0) {
             // マウント状態になっていなければ例外を出力
             throw new RuntimeException(WksConstants.OTHER_MOUNT_STATUS_EXCEPTION);
         }
@@ -440,12 +428,12 @@ public class SshCommand {
         runCommand(ci, WksConstants.CMD_UMOUNT_SHARE);
 
         // nasのマウント状態確認
-        if (runCommand(ci, WksConstants.CMD_MOUNT_STATUS_NAS).length != 0){
+        if (runCommand(ci, WksConstants.CMD_MOUNT_STATUS_NAS).length != 0) {
             // マウント状態が解除されていなければ例外を出力
             throw new RuntimeException(WksConstants.OTHER_MOUNT_STATUS_EXCEPTION);
         }
         // shareのマウント状態確認
-        if (runCommand(ci, WksConstants.CMD_MOUNT_STATUS_SHARE).length != 0){
+        if (runCommand(ci, WksConstants.CMD_MOUNT_STATUS_SHARE).length != 0) {
             // マウント状態が解除されていなければ例外を出力
             throw new RuntimeException(WksConstants.OTHER_MOUNT_STATUS_EXCEPTION);
         }

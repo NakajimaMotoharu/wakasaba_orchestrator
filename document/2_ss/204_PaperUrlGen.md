@@ -73,7 +73,7 @@ public static String getPaperMcVersion(String json);
 #### 例外
 
 正式版未検出時（`versions` が空の場合を含む）は `RuntimeException` を送出する。
-メッセージは `OTHER_PAPERMC_EXCEPTION`（`Exception: No official version was found.`）とする。
+メッセージは `OTHER_PAPERMC_EXCEPTION`（`No official version was found.`）とする。
 呼び出し元の `SshCommand`、`WksWorkFlow` を経由して `Main.main` で捕捉し、スタックトレースをログへ記録する。
 
 #### 対象JSONの構造（例）
