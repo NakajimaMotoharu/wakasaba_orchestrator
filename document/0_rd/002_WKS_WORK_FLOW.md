@@ -2,13 +2,13 @@
 
 ## 基本情報
 
-| 項目             | 内容                                                                                      |
-|------------------|-------------------------------------------------------------------------------------------|
-| 完全修飾クラス名 | `com.wks.workflow.WksWorkFlow`                                                            |
-| ファイル名       | `WksWorkFlow.java`                                                                        |
-| 種別             | class（public）                                                                           |
-| 責務             | リモート6台と管理端末の工程単位メンテナンスを定義・実行する                               |
-| 主な依存クラス   | `Main`、`SshCommand`、`BashExec`、`ConnectionInformation`、`WksConstants`、`UpdateThread` |
+| 項目             | 内容                                                                                        |
+|------------------|---------------------------------------------------------------------------------------------|
+| 完全修飾クラス名 | `com.wks.workflow.WksWorkFlow`                                                              |
+| ファイル名       | `WksWorkFlow.java`                                                                          |
+| 種別             | class（public）                                                                             |
+| 責務             | リモート6台と管理端末の工程単位メンテナンスを定義・実行する                                 |
+| 主な依存クラス   | `AplLog`、`SshCommand`、`BashExec`、`ConnectionInformation`、`WksConstants`、`UpdateThread` |
 
 ---
 
@@ -27,7 +27,7 @@
 ```
 1. setConnectionInformation(servers): 6ファイルを読み込み cis[0]～cis[5] を設定
 2. isAllAlive(cis): 引数順に確認前ログを追記しSSH疎通確認
-   最初の疎通不可 → WARNING: Servers Not Active → 保守せずMainへ復帰
+   最初の疎通不可 → Servers Not Active → 保守せずMainへ復帰
 3. systemStop(cis): PaperMC停止 → Schubert停止 → 管理端末で60秒待機（1回）
 4. allUMount(cis): サーバ0～4の /nas・/share を解除し、findmntの出力がないことを確認
 5. allUpdate(cis): サーバ0～5を並列更新（各台 update → upgrade）
@@ -39,9 +39,9 @@
 10. systemPreSetup(cis): サーバ1でバックアップ → PaperMC/Pl3xMap取得 → SHA検証・配置
     wgetPaperMcの末尾で、管理端末のpapermc_version.txtを更新
 11. systemStart(cis): PaperMC起動 → Schubert起動
-12. 管理端末: 区切りログ → BashExec.update() → upgrade() → shutdown()
-13. Mainで終了時刻記録・ログファイル出力
-例外発生: 後続工程中止 → Mainでスタックトレース・終了ログ出力 → 手動復旧
+12. 管理端末: BashExec.update() → upgrade() → shutdown()
+13. MainでSYS終了ログ追加 → endOfLogOutput → AplLog.join
+例外発生: 後続工程中止 → MainでERR・SYS終了ログ追加 → 受付終了・join → 手動復旧
 ```
 
 ### WF-03：対象サーバの役割
@@ -59,7 +59,7 @@
 ### WF-04：異常時の停止
 
 マウント状態不一致・復帰待ち超過等で例外を送出した場合は後続工程を中止し、手動復旧とすること。
-ログファイルにはMainがスタックトレースと終了時刻を記録すること。
+Mainが例外をAplLogのERRへ渡し、SYS終了ログ追加・受付終了・joinを行うこと。
 
 ---
 
@@ -80,9 +80,7 @@
 
 ### フィールド
 
-| フィールド名 | 型             | 修飾子                 | 初期値     | 要件                                         |
-|--------------|----------------|------------------------|------------|----------------------------------------------|
-| `log`        | `List<String>` | `private static final` | `Main.log` | 初期疎通確認対象・警告・管理端末区切りの追記 |
+なし。ログはAplLogを通して追加する。
 
 ### メソッド
 
@@ -147,13 +145,16 @@
 
 ## 制約・注意事項
 
-- 共有ログの宣言型は `List<String>`、実体は `Main` が生成する `CopyOnWriteArrayList<String>` とする。各クラスは同一インスタンスを参照する。
-- 並列更新中の `add`・`addAll` は安全に実行できるが、コマンド行と標準出力を一体で排他しないため、サーバ間のログは混在する。サーバ別の順序・まとまりは保証しない。
+- 初期疎通確認前は対象ci.host()のAPLでChecking Connectionを記録する。疎通不可の全体中止はlocalhostのERRでServers Not
+  Activeを記録する。区切りログは廃止する。
+
+
+- ログはAplLog.getInstance()へ渡す。日時・サーバIP・ログレベルは受付時に付与され、専用スレッドが随時ファイルへ出力する。
+- サーバごとの複数行を一括排他しないため、並列更新中は行が混在する。
+
 
 - 工程の順序は維持し、OS更新工程のみサーバ間を並列化する。共有操作・再起動・復帰確認・アプリ操作は従来どおり直列とする。
 - 全機疎通確認はサービス停止前に行い、最初の失敗で中止する。管理端末のOS更新も開始しない。
-- 初期疎通確認前に `Checking Connection: %s`（host・port・user）を記録する。リモート各台の `LOG_SPLIT`
-  は記録せず、管理端末の区切りのみ維持する。
 - NAS以外のリモート5台には `/nas`・`/share` の設定、`findmnt` と必要な権限があることを前提とする。管理端末は共有操作対象外。
 - 両サービス停止後の固定待機は管理端末で1回60秒のみ。停止状態の動的確認は行わない。
 - 全台再起動指示後も管理端末で1回60秒待機し、その後SSH復帰を待つ。boot_idは確認しない。

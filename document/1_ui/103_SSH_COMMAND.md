@@ -8,15 +8,13 @@
 | ファイル名       | `SshCommand.java`                                                                                 |
 | 種別             | class（public）                                                                                   |
 | 責務             | SSH経由で実行する各種コマンドの業務ロジックラッパー。コマンドの組み立て・実行・ログ記録を集約する |
-| 主な依存クラス   | `Main`、`SshExec`、`ConnectionInformation`、`Curl`、`PaperUrlGen`、`WksConstants`、`BashExec`     |
+| 主な依存クラス   | `AplLog`、`SshExec`、`ConnectionInformation`、`Curl`、`PaperUrlGen`、`WksConstants`、`BashExec`   |
 
 ---
 
 ## フィールド一覧
 
-| フィールド名 | 型             | 修飾子                 | 説明                                                                      |
-|--------------|----------------|------------------------|---------------------------------------------------------------------------|
-| `log`        | `List<String>` | `private static final` | `Main.log` への参照。実行コマンドと標準出力をログに追記するために使用する |
+なし。ログはAplLogを通して追加する。
 
 ---
 
@@ -107,31 +105,31 @@ PaperMCの最新正式版および対応するPl3xMapのJARをリモートサー
 [PaperMC 検証・配置]
 4. waitForBecomeActive(ci)
 5. SshExec(ci, CMD_PAPERMC_HASH).execute() → ret（sha256sum 出力）
-6. log にコマンドと結果を追記
+6. CMDを実行前、OUT配列を実行後にAplLogへ追加
 7. ret[0].substring(0, 64) == expectedSHA256 ?
    Yes:
      8.  waitForBecomeActive(ci)
      9.  SshExec(ci, CMD_PAPERMC_RM).execute()  → 本番 JAR を削除
-     10. log に追記
+     10. CMDは実行前、OUTは実行後にAplLogへ追加
      11. waitForBecomeActive(ci)
      12. SshExec(ci, CMD_PAPERMC_MV).execute()  → DL ファイルを本番へ移動
-     13. log に追記
+     13. CMDは実行前、OUTは実行後にAplLogへ追加
    No: スキップ（ハッシュ不一致のため移動しない）
 
 [Pl3xMap 旧ファイル削除（常に実行）]
 14. waitForBecomeActive(ci)
 15. SshExec(ci, CMD_PL3XMAP_RM).execute()  → 本番プラグイン JAR を削除
-16. log に追記
+16. CMDは実行前、OUTは実行後にAplLogへ追加
 
 [Pl3xMap 検証・配置（expectedSHA512 != null の場合のみ）]
 17. waitForBecomeActive(ci)
 18. SshExec(ci, CMD_PL3XMAP_HASH).execute() → ret（sha512sum 出力）
-19. log に追記
+19. CMDは実行前、OUTは実行後にAplLogへ追加
 20. ret[0].substring(0, 128) == expectedSHA512 ?
     Yes:
       21. waitForBecomeActive(ci)
       22. SshExec(ci, CMD_PL3XMAP_MV).execute() → DL ファイルを本番へ移動
-      23. log に追記
+      23. CMDは実行前、OUTは実行後にAplLogへ追加
     No: スキップ
 ```
 
@@ -147,12 +145,12 @@ PaperMCの最新正式版および対応するPl3xMapのJARをリモートサー
 ### `runCommand(ConnectionInformation ci, String cmd)` ※private
 
 ```
-1. waitForBecomeActive(ci) → サーバが応答するまで待機
-2. new SshExec(ci, cmd)
-3. sshExec.execute() → ret（標準出力の行配列）
-4. log に "$ {cmd}" を追記
-5. log に ret の全要素を追記
-6. ret（String[]）を呼び出し元へ返却
+1. waitForBecomeActive(ci)
+2. SshExec(ci, cmd)を生成
+3. AplLog.outCommandLog(ci.host(), cmd)でCMDを追加
+4. execute() → ret（終了後の標準出力配列）
+5. AplLog.outOutputLog(ci.host(), ret)でOUTを追加
+6. retを返す
 ```
 
 ---
@@ -191,7 +189,7 @@ PaperMCの最新正式版および対応するPl3xMapのJARをリモートサー
 2. sshExec.isAlive() の結果を返却
 ```
 
-処理開始時点で対象サーバへSSH接続可能か判定する。コマンド実行および標準出力ログの追加は行わない。
+処理開始時点で対象サーバへSSH接続可能か判定する。この疎通判定部品内ではコマンド実行および標準出力ログの追加は行わない。確認対象APLは呼び出し元のWksWorkFlowで追加する。
 
 ---
 
@@ -227,10 +225,12 @@ NAS自身を除外する責務は `WksWorkFlow` にあり、ここでは指定�
 
 ## 設計上の注意点
 
+- ログはAplLog.getInstance()へ渡す。日時・サーバIP・ログレベルは受付時に付与され、専用スレッドが随時ファイルへ出力する。
+- サーバごとの複数行を一括排他しないため、並列更新中は行が混在する。
+
+
 - OS更新工程では、異なる接続先の `update`・`upgrade` が複数の `UpdateThread` から同時に呼ばれる。各台のコマンド順は維持する。
 
-- 共有ログの宣言型は `List<String>`、実体は `Main` が生成する `CopyOnWriteArrayList<String>` とする。各クラスは同一インスタンスを参照する。
-- 並列更新中の `add`・`addAll` は安全に実行できるが、コマンド行と標準出力を一体で排他しないため、サーバ間のログは混在する。サーバ別の順序・まとまりは保証しない。
 
 - バージョンファイルの親ディレクトリの存在と実行ユーザの作成・上書き権限、十分なディスク容量を前提とする。親ディレクトリの自動作成や
   `PrintStream` のエラーフラグ確認は行わない。
@@ -242,3 +242,9 @@ NAS自身を除外する責務は `WksWorkFlow` にあり、ここでは指定�
 - `movePaperMc` における Pl3xMap の旧ファイル削除（`CMD_PL3XMAP_RM`）は、新バージョンのダウンロード有無に関わらず**常に実行
   **される。
 - `wgetPaperMc` と `movePaperMc` の両方で独立して API を呼び出してバージョン情報を取得する。
+
+## 備考（将来対応）
+
+- 将来対応1（ローカル大量出力時の停止リスク）：BashExecは終了待ちの後に標準出力を読み取るため、パイプが満杯になると子プロセスとJava側が相互待ちになる可能性がある。現在の運用では許容し、今回の変更では未解消とする。
+- 将来対応2（SSH標準出力の逐次ログ化）：SshExecは標準出力を配列に蓄積し、コマンド終了後にSshCommandからAplLogへ渡す。実行中の進捗は記録しない現行仕様を許容し、将来対応1とあわせて見直す。
+- 上記2件は解消済みではなく、明示的に保留した事項である。

@@ -27,13 +27,13 @@ public class PaperUrlGen {
         // メジャーバージョンのリストを取得
         List<String> majorVersionNames = List.copyOf(majorVersion.propertyNames());
         // メジャーバージョンごとにループ
-        for (int i = 0; i < majorVersionNames.size() && !majorVersionFlag; i++){
+        for (int i = 0; i < majorVersionNames.size() && !majorVersionFlag; i++) {
             // メジャーバージョンの文字列を取得
             String majorVersionString = majorVersionNames.get(i);
             // メジャーバージョンのJsonNodeを取得
             JsonNode majorVersionJNode = majorVersion.get(majorVersionString);
             // 各マイナーバージョンごとにループ
-            for (int j = 0; j < majorVersionJNode.size() && !majorVersionFlag; j++){
+            for (int j = 0; j < majorVersionJNode.size() && !majorVersionFlag; j++) {
                 // マイナーバージョンを取得
                 version = majorVersionJNode.get(j).toString();
                 // マイナーバージョンが正式版であれば出力フラグを真に設定
@@ -45,7 +45,7 @@ public class PaperUrlGen {
         if (!majorVersionFlag) throw new RuntimeException(WksConstants.OTHER_PAPERMC_EXCEPTION);
 
         // バージョン情報からダブルクオーテーションを除去して返却
-        return  version.replace(WksConstants.JSON_REPLACE_DQ, WksConstants.JSON_REPLACE_ES);
+        return version.replace(WksConstants.JSON_REPLACE_DQ, WksConstants.JSON_REPLACE_ES);
     }
 
     /**

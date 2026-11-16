@@ -189,25 +189,41 @@ public class WksConstants {
 
     // ログメッセージ
     /**
-     * プログラム開始ログ
+     * システムログタイプ
      */
-    public static final String LOG_START_TIME = "Batch start time: %s";
+    public static final String LOG_LEVEL_SYSTEM = "SYS";
     /**
-     * プログラム終了ログ
+     * アプリログタイプ
      */
-    public static final String LOG_END_TIME = "Batch end time: %s";
+    public static final String LOG_LEVEL_APPLICATIONS = "APL";
     /**
-     * 実行コマンド記述ログ
+     * コマンドログタイプ
      */
-    public static final String LOG_COMMAND = "$ %s";
+    public static final String LOG_LEVEL_COMMAND = "CMD";
     /**
-     * サーバ区切りログ
+     * 例外ログタイプ
      */
-    public static final String LOG_SPLIT = "/* --------Job start: %s-------- */";
+    public static final String LOG_LEVEL_EXCEPTION = "ERR";
     /**
-     * 実行サーバログ
+     * 出力タイプ
      */
-    public static final String LOG_THIS_SERVER = "this server";
+    public static final String LOG_LEVEL_OUTPUT = "OUT";
+    /**
+     * コマンドログ用接頭辞
+     */
+    public static final String LOG_PARTS_DOL = "$ ";
+    /**
+     * ログ出力用改行文字
+     */
+    public static final String LOG_PARTS_LF = "\n";
+    /**
+     * ログ出力フォーマット
+     */
+    public static final String LOG_FORMAT = "[%s %s %s]: %s" + LOG_PARTS_LF;
+
+    public static final String LOG_START_MESSAGE = "BATCH MAINTENANCE START";
+
+    public static final String LOG_FINISH_MESSAGE = "BATCH MAINTENANCE END";
 
     // URLフォーマット
     /**
@@ -321,11 +337,11 @@ public class WksConstants {
     /**
      * 全サーバが現在アクティブでないときの警告メッセージ
      */
-    public static final String OTHER_NOT_ALIVE_MSG = "WARNING: Servers Not Active";
+    public static final String OTHER_NOT_ALIVE_MSG = "Servers Not Active";
     /**
      * PaperMCのバージョン探索で正式版が見つからなかった時の例外内容
      */
-    public static final String OTHER_PAPERMC_EXCEPTION = "Exception: No official version was found.";
+    public static final String OTHER_PAPERMC_EXCEPTION = "No official version was found.";
     /**
      * NASマウント状態が正常でない場合の例外内容
      */
@@ -333,7 +349,7 @@ public class WksConstants {
     /**
      * 疎通確認時のメッセージ
      */
-    public static final String OTHER_CONNECTION_CHECK = "Checking Connection: %s";
+    public static final String OTHER_CONNECTION_CHECK = "Checking Connection";
     /**
      * 再起動待機時間上限
      */
@@ -342,4 +358,8 @@ public class WksConstants {
      * サーバの起動状態に復帰しない場合の例外内容
      */
     public static final String OTHER_REBOOT_EXCEPTION = "The server did not restart successfully: %s";
+    /**
+     * ローカルホストIPの出力
+     */
+    public static final String OTHER_IP_LOCALHOST = "localhost";
 }

@@ -38,7 +38,7 @@ java -jar wakasaba_orchestrator-1.0-SNAPSHOT-all.jar <server0_file> <server1_fil
 ```
 com.wks
 ├── main
-│   └── Main.java                  # エントリポイント・ログ管理
+│   └── Main.java                  # エントリポイント・AplLog初期化・終了待機
 ├── workflow
 │   └── WksWorkFlow.java           # サーバ操作シーケンス定義
 ├── cmd
@@ -46,6 +46,7 @@ com.wks
 ├── papermc
 │   └── PaperUrlGen.java           # PaperMC/Pl3xMap APIパーサ
 ├── util
+│   ├── AplLog.java               # 単一インスタンス・ログ受付・非同期ファイル出力
 │   ├── ConnectionInformation.java # サーバ接続情報Record
 │   ├── SshExec.java               # JSch SSH実行エンジン
 │   ├── BashExec.java              # ローカルBashコマンド実行
@@ -62,6 +63,7 @@ com.wks
 |------------------------------------------------------|--------------------|--------------------------------------|----------------------------------------------------------|
 | [Main](./201_Main)                                   | `com.wks.main`     | class                                | エントリポイント。引数検証・ログ管理・ログファイル出力   |
 | [WksWorkFlow](./202_WksWorkFlow)                     | `com.wks.workflow` | class                                | 6台のリモートサーバ＋自サーバへの処理シーケンス定義      |
+| [AplLog](210_AplLog.md)                              | `com.wks.util`     | class（Thread継承）                  | ログ受付・例外整形・随時ファイル出力                     |
 | `UpdateThread`                                       | `com.wks.workflow` | class（package-private、Thread継承） | WksWorkFlow.java内。サーバ1台のupdate・upgradeと例外保持 |
 | [SshCommand](./203_SshCommand)                       | `com.wks.cmd`      | class                                | SSH経由コマンド実行の業務ロジックラッパー                |
 | [PaperUrlGen](./204_PaperUrlGen)                     | `com.wks.papermc`  | class                                | PaperMC・Pl3xMap APIレスポンスJSONパーサ                 |
@@ -88,12 +90,15 @@ com.wks
 
 ## 処理フロー概要
 
+- 初期疎通確認前は対象ci.host()のAPLでChecking Connectionを記録する。疎通不可の全体中止はlocalhostのERRでServers Not
+  Activeを記録する。区切りログは廃止する。
+
 Mainで6引数を検証し、開始ログを記録して次のワークフローを呼び出す。
 
 ```
 1. setConnectionInformation(servers): 6ファイルを読み込み cis[0]～cis[5] を設定
 2. isAllAlive(cis): 引数順に確認前ログを追記しSSH疎通確認
-   最初の疎通不可 → WARNING: Servers Not Active → 保守せずMainへ復帰
+   最初の疎通不可 → Servers Not Active → 保守せずMainへ復帰
 3. systemStop(cis): PaperMC停止 → Schubert停止 → 管理端末で60秒待機（1回）
 4. allUMount(cis): サーバ0～4の /nas・/share を解除し、findmntの出力がないことを確認
 5. allUpdate(cis): サーバ0～5を並列更新（各台 update → upgrade）
@@ -105,9 +110,9 @@ Mainで6引数を検証し、開始ログを記録して次のワークフロー
 10. systemPreSetup(cis): サーバ1でバックアップ → PaperMC/Pl3xMap取得 → SHA検証・配置
     wgetPaperMcの末尾で、管理端末のpapermc_version.txtを更新
 11. systemStart(cis): PaperMC起動 → Schubert起動
-12. 管理端末: 区切りログ → BashExec.update() → upgrade() → shutdown()
-13. Mainで終了時刻記録・ログファイル出力
-例外発生: 後続工程中止 → Mainでスタックトレース・終了ログ出力 → 手動復旧
+12. 管理端末: BashExec.update() → upgrade() → shutdown()
+13. MainでSYS終了ログ追加 → endOfLogOutput → AplLog.join
+例外発生: 後続工程中止 → MainでERR・SYS終了ログ追加 → 受付終了・join → 手動復旧
 ```
 
 | インデックス | 定数              | 役割             | 保守対象                                                           |
@@ -122,8 +127,6 @@ Mainで6引数を検証し、開始ログを記録して次のワークフロー
 
 - 工程の順序は維持し、OS更新工程のみサーバ間を並列化する。共有操作・再起動・復帰確認・アプリ操作は従来どおり直列とする。
 - 全機疎通確認はサービス停止前に行い、最初の失敗で中止する。管理端末のOS更新も開始しない。
-- 初期疎通確認前に `Checking Connection: %s`（host・port・user）を記録する。リモート各台の `LOG_SPLIT`
-  は記録せず、管理端末の区切りのみ維持する。
 - NAS以外のリモート5台には `/nas`・`/share` の設定、`findmnt` と必要な権限があることを前提とする。管理端末は共有操作対象外。
 - 両サービス停止後の固定待機は管理端末で1回60秒のみ。停止状態の動的確認は行わない。
 - 全台再起動指示後も管理端末で1回60秒待機し、その後SSH復帰を待つ。boot_idは確認しない。
@@ -137,14 +140,36 @@ Mainで6引数を検証し、開始ログを記録して次のワークフロー
 
 ---
 
-## 出力ファイル
+## ログ出力仕様
 
-- 共有ログの宣言型は `List<String>`、実体は `Main` が生成する `CopyOnWriteArrayList<String>` とする。各クラスは同一インスタンスを参照する。
-- 並列更新中の `add`・`addAll` は安全に実行できるが、コマンド行と標準出力を一体で排他しないため、サーバ間のログは混在する。サーバ別の順序・まとまりは保証しない。
+| 項目             | 内容                                                                            |
+|------------------|---------------------------------------------------------------------------------|
+| 書式             | `[日時 サーバIP ログレベル]: 内容` ＋ LF                                        |
+| 日時             | 受付時の管理端末時刻。`yyyyMMddHHmmss`、Asia/Tokyo                              |
+| サーバIP欄       | SSH操作対象の `ci.host()`。ホスト名の場合はそのまま。ローカル処理は `localhost` |
+| レベル           | `SYS`・`APL`・`CMD`・`OUT`・`ERR`                                               |
+| CMD本文          | `$ ` ＋コマンド                                                                 |
+| 出力先           | 管理端末の `/home/mini/wakasaba_orchestrator/log/log_%s.txt`                    |
+| ファイル名の日時 | AplLog初回生成時の日時。終了時刻ではない                                        |
+| 文字コード・更新 | `PrintStream(String)` の既定値。新規作成または上書き                            |
+| 書き出し         | 受付済みログを専用スレッドで随時出力。リスト排出後は1秒休止                     |
+| 終了             | 最終ログ追加→終了通知→join。残ログ排出後にclose                                 |
+
+- ログの所有者はAplLogのみとし、各部品はgetInstance経由で追加する。Mainの公開ログリスト・終了時一括出力APIは使用しない。
+- 並列更新中も同一インスタンスへ追加する。各行に接続先を付けるが、複数行を一括排他しないためサーバ間のログは混在する。
+- 受付済みログの随時書き出しであり、すべてのコマンド出力の逐次取得や厳密な即時性を保証するものではない。
+- 正常な終了順序は全ログ発行処理の完了→最終ログ追加→endOfLogOutput→join。終了通知後の追加は受け付けない。
+- ログディレクトリの存在、作成・上書き権限と十分な容量を前提とする。親ディレクトリの作成とPrintStreamの書き込みエラーフラグ検査は行わない。
+
+詳細は [AplLog](210_AplLog.md) を参照。
+
+---
+
+## 出力ファイル
 
 | 定数                   | 管理端末上の出力先                                     | 内容・出力タイミング                                   |
 |------------------------|--------------------------------------------------------|--------------------------------------------------------|
-| `PATH_EXEC_LOG`        | `/home/mini/wakasaba_orchestrator/log/log_%s.txt`      | 終了時刻ごとの実行ログ。`Main.outLog` で出力           |
+| 実行ログ               | `/home/mini/wakasaba_orchestrator/log/log_%s.txt`      | 初回生成時刻のファイルへAplLogが随時出力               |
 | `PATH_PAPERMC_VERSION` | `/home/mini/wakasaba_orchestrator/papermc_version.txt` | 取得対象のバージョン文字列。`wgetPaperMc` の末尾で出力 |
 
 両パスは `PATH_WAKASABA_EXEC`（`/home/mini/wakasaba_orchestrator/`）との定数連結で構成する。
@@ -177,3 +202,9 @@ Pl3xMapをバージョン不一致でスキップした場合も出力するが�
 - [接続情報ファイル仕様](./290_SERVER_FILE_SPEC)
 - [PaperMC API仕様メモ](./291_PAPERMC_API_NOTE)
 - [例外・エラーハンドリング方針](./292_ERROR_HANDLING)
+
+## 備考（将来対応）
+
+- 将来対応1（ローカル大量出力時の停止リスク）：BashExecは終了待ちの後に標準出力を読み取るため、パイプが満杯になると子プロセスとJava側が相互待ちになる可能性がある。現在の運用では許容し、今回の変更では未解消とする。
+- 将来対応2（SSH標準出力の逐次ログ化）：SshExecは標準出力を配列に蓄積し、コマンド終了後にSshCommandからAplLogへ渡す。実行中の進捗は記録しない現行仕様を許容し、将来対応1とあわせて見直す。
+- 上記2件は解消済みではなく、明示的に保留した事項である。

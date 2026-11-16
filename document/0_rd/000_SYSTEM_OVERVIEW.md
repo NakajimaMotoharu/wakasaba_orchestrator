@@ -135,6 +135,10 @@ PaperMCに続けてSchubert停止シェルを実行し、両コマンド完了�
 
 ### FR-10：全機疎通確認・再起動後の復帰待ち
 
+- 初期疎通確認前は対象ci.host()のAPLでChecking Connectionを記録する。疎通不可の全体中止はlocalhostのERRでServers Not
+  Activeを記録する。区切りログは廃止する。
+
+
 - 全6台の初期SSH疎通確認が保守開始条件であること。1台でも不可なら警告を記録し、管理端末も含め保守しないこと。
 - 全台へ再起動指示後に管理端末で60秒待ち、各サーバを `SERVER_REBOOT_WAIT_LIMIT = 600` 秒目安で順に復帰待ちすること。
 - SSH接続確認は `session.connect(60000)` を使用し、失敗試行後は1秒待って再試行すること。
@@ -146,7 +150,7 @@ PaperMCに続けてSchubert停止シェルを実行し、両コマンド完了�
 ```
 1. setConnectionInformation(servers): 6ファイルを読み込み cis[0]～cis[5] を設定
 2. isAllAlive(cis): 引数順に確認前ログを追記しSSH疎通確認
-   最初の疎通不可 → WARNING: Servers Not Active → 保守せずMainへ復帰
+   最初の疎通不可 → Servers Not Active → 保守せずMainへ復帰
 3. systemStop(cis): PaperMC停止 → Schubert停止 → 管理端末で60秒待機（1回）
 4. allUMount(cis): サーバ0～4の /nas・/share を解除し、findmntの出力がないことを確認
 5. allUpdate(cis): サーバ0～5を並列更新（各台 update → upgrade）
@@ -158,25 +162,23 @@ PaperMCに続けてSchubert停止シェルを実行し、両コマンド完了�
 10. systemPreSetup(cis): サーバ1でバックアップ → PaperMC/Pl3xMap取得 → SHA検証・配置
     wgetPaperMcの末尾で、管理端末のpapermc_version.txtを更新
 11. systemStart(cis): PaperMC起動 → Schubert起動
-12. 管理端末: 区切りログ → BashExec.update() → upgrade() → shutdown()
-13. Mainで終了時刻記録・ログファイル出力
-例外発生: 後続工程中止 → Mainでスタックトレース・終了ログ出力 → 手動復旧
+12. 管理端末: BashExec.update() → upgrade() → shutdown()
+13. MainでSYS終了ログ追加 → endOfLogOutput → AplLog.join
+例外発生: 後続工程中止 → MainでERR・SYS終了ログ追加 → 受付終了・join → 手動復旧
 ```
 
 工程ごとに対象全台を処理すること。OS更新はサーバごとにスレッドを開始し、各台ではupdate後にupgradeを実行すること。
 全更新スレッドの終了と例外有無を確認してから再起動へ進むこと。その他の工程は従来どおり直列実行とすること。
 
-### FR-12：実行ログの記録・ファイル出力
+### FR-12：実行ログの記録・随時出力
 
-- 共有ログの宣言型は `List<String>`、実体は `Main` が生成する `CopyOnWriteArrayList<String>` とする。各クラスは同一インスタンスを参照する。
-- 並列更新中の `add`・`addAll` は安全に実行できるが、コマンド行と標準出力を一体で排他しないため、サーバ間のログは混在する。サーバ別の順序・まとまりは保証しない。
-
-- バッチ開始時刻・終了時刻をログに記録すること。
-- 各リモートサーバの初期疎通確認前に接続情報を記録し、管理端末の保守開始時に区切りログを記録すること。
-- 実行したコマンドおよびその標準出力をログに記録すること。
-- ワークフロー実行中の例外はスタックトレースとしてログに記録すること。
-- ワークフローの正常・異常終了にかかわらず、収集したログをファイルへ出力すること。
-- ログファイル名は終了時刻のタイムスタンプ（yyyyMMddHHmmss形式）を含むこと。
+- AplLogの単一インスタンスへ各部品からログを追加し、専用スレッドで随時ファイルへ出力すること。
+- 日時・サーバIP・レベルを各受付行へ付与すること。ログファイル名はAplLog初回生成時刻で決めること。
+- SYSで開始・終了、APLで疎通確認、CMDでコマンド、OUTで標準出力、ERRで例外・異常メッセージを記録すること。
+- 例外全体をprintStackTraceで文字列化し、各行へERRを付けること。
+- 最終ログ追加後に受付終了し、joinで残ログ出力とcloseを待つこと。
+- Bashの固定待機と時刻取得はログ対象外とし、標準出力の取得タイミングは今回変更しないこと。
+- 詳細は [AplLog](010_APL_LOG.md) を参照すること。
 
 ### FR-13：PaperMCバージョンファイルの出力
 
@@ -197,7 +199,7 @@ PaperMCに続けてSchubert停止シェルを実行し、両コマンド完了�
 
 ### NFR-01：信頼性
 
-- 各コマンドの実行・出力はすべてログへ記録し、実行後に内容を確認できること。
+- ログ対象コマンドの実行・出力を記録し、実行中も受付済みログを確認できること。
 - JARファイルの配置前にチェックサム検証を行い、不正なファイルの配置を防止すること。
 
 ### NFR-02：保守性
@@ -280,26 +282,31 @@ PaperMCに続けてSchubert停止シェルを実行し、両コマンド完了�
 
 ## 出力要件
 
-### OUT-01：ログファイル
+### OUT-01：実行ログ
 
-| 項目               | 内容                                                                      |
-|--------------------|---------------------------------------------------------------------------|
-| 出力先ディレクトリ | `/home/mini/wakasaba_orchestrator/log/`                                   |
-| ファイル名         | `log_yyyyMMddHHmmss.txt`（終了時刻タイムスタンプ）                        |
-| 文字コード         | UTF-8互換（Java標準PrintStream使用）                                      |
-| 出力タイミング     | ワークフローの正常・異常終了後に出力。`outLog` 自身の失敗時は出力されない |
+| 項目             | 内容                                                                            |
+|------------------|---------------------------------------------------------------------------------|
+| 書式             | `[日時 サーバIP ログレベル]: 内容` ＋ LF                                        |
+| 日時             | 受付時の管理端末時刻。`yyyyMMddHHmmss`、Asia/Tokyo                              |
+| サーバIP欄       | SSH操作対象の `ci.host()`。ホスト名の場合はそのまま。ローカル処理は `localhost` |
+| レベル           | `SYS`・`APL`・`CMD`・`OUT`・`ERR`                                               |
+| CMD本文          | `$ ` ＋コマンド                                                                 |
+| 出力先           | 管理端末の `/home/mini/wakasaba_orchestrator/log/log_%s.txt`                    |
+| ファイル名の日時 | AplLog初回生成時の日時。終了時刻ではない                                        |
+| 文字コード・更新 | `PrintStream(String)` の既定値。新規作成または上書き                            |
+| 書き出し         | 受付済みログを専用スレッドで随時出力。リスト排出後は1秒休止                     |
+| 終了             | 最終ログ追加→終了通知→join。残ログ排出後にclose                                 |
 
-#### ログ記録内容
+```text
+[20261116120000 localhost SYS]: BATCH MAINTENANCE START
+[20261116120001 192.168.1.10 APL]: Checking Connection
+[20261116120002 192.168.1.10 CMD]: $ sudo apt update
+[20261116120005 192.168.1.10 OUT]: Hit:1 ...
+[20261116120006 localhost ERR]: java.lang.RuntimeException: update failed
+[20261116120007 localhost SYS]: BATCH MAINTENANCE END
+```
 
-| 種別                   | フォーマット例                                                   |
-|------------------------|------------------------------------------------------------------|
-| バッチ開始時刻         | `Batch start time: 20240101120000`                               |
-| バッチ終了時刻         | `Batch end time: 20240101130000`                                 |
-| 初期疎通確認対象       | `Checking Connection: {host: "x.x.x.x", port: 22, user: "mini"}` |
-| 自サーバ処理開始区切り | `/* --------Job start: this server-------- */`                   |
-| 実行コマンド           | `$ sudo apt update`                                              |
-| コマンド標準出力       | （各コマンド実行結果の各行）                                     |
-| 例外情報               | ワークフロー実行中に捕捉した例外のスタックトレース               |
+ファイルの親ディレクトリと権限を事前に用意すること。引数不正時はファイルを作成しないこと。
 
 ### OUT-02：標準出力（USAGEメッセージ）
 
@@ -338,8 +345,8 @@ PaperMCに続けてSchubert停止シェルを実行し、両コマンド完了�
 
 
 - 業務メソッドで発生した検査例外は `throws` 宣言で上位クラスへ委譲し、非検査例外も含めて最終的に `Main.main` まで伝播させること。
-- `Main.main` はワークフロー実行中の `Exception` を捕捉し、スタックトレースをログへ追記した後、終了時刻記録とログファイル出力を行うこと。
-- `Main.outLog` が送出する `IOException` はJVMへ伝播させること。
+- Main.mainはワークフローのExceptionをAplLogのERRへ渡し、SYS終了ログ追加・受付終了・joinを行うこと。
+- AplLogの初回オープン失敗はIOException、ログ終了待ちの割り込みはInterruptedExceptionとしてMainから上位へ伝播させること。
 
 ### ER-02：例外の種類と想定発生状況
 
@@ -366,18 +373,25 @@ PaperMCに続けてSchubert停止シェルを実行し、両コマンド完了�
 
 本要件定義書は以下のファイルで構成される。
 
-| ファイル名                      | 内容                                       |
-|---------------------------------|--------------------------------------------|
-| `000_SYSTEM_OVERVIEW.md`        | システム全体概要（本ドキュメント）         |
-| `001_MAIN.md`                   | エントリポイント要件（Main）               |
-| `002_WKS_WORK_FLOW.md`          | 処理シーケンス要件（WksWorkFlow）          |
-| `003_SSH_COMMAND.md`            | SSHコマンド実行要件（SshCommand）          |
-| `004_PAPER_URL_GEN.md`          | PaperMC/Pl3xMap API解析要件（PaperUrlGen） |
-| `005_CONNECTION_INFORMATION.md` | 接続情報管理要件（ConnectionInformation）  |
-| `006_SSH_EXEC.md`               | SSH実行エンジン要件（SshExec）             |
-| `007_BASH_EXEC.md`              | ローカルBash実行要件（BashExec）           |
-| `008_CURL.md`                   | HTTP GETリクエスト要件（Curl）             |
-| `009_WKS_CONSTANTS.md`          | 定数管理要件（WksConstants）               |
-| `090_SERVER_FILE_SPEC.md`       | 補足：接続情報ファイル仕様                 |
-| `091_EXTERNAL_API_SPEC.md`      | 補足：外部API仕様                          |
-| `092_ERROR_HANDLING.md`         | 補足：例外・エラーハンドリング要件         |
+| ファイル名                       | 内容                                           |
+|----------------------------------|------------------------------------------------|
+| `000_SYSTEM_OVERVIEW.md`         | システム全体概要（本ドキュメント）             |
+| `001_MAIN.md`                    | エントリポイント要件（Main）                   |
+| `002_WKS_WORK_FLOW.md`           | 処理シーケンス要件（WksWorkFlow）              |
+| `003_SSH_COMMAND.md`             | SSHコマンド実行要件（SshCommand）              |
+| `004_PAPER_URL_GEN.md`           | PaperMC/Pl3xMap API解析要件（PaperUrlGen）     |
+| `005_CONNECTION_INFORMATION.md`  | 接続情報管理要件（ConnectionInformation）      |
+| `006_SSH_EXEC.md`                | SSH実行エンジン要件（SshExec）                 |
+| `007_BASH_EXEC.md`               | ローカルBash実行要件（BashExec）               |
+| `008_CURL.md`                    | HTTP GETリクエスト要件（Curl）                 |
+| `009_WKS_CONSTANTS.md`           | 定数管理要件（WksConstants）                   |
+| [010_APL_LOG.md](010_APL_LOG.md) | AplLogの単一インスタンス・非同期出力・終了管理 |
+| `090_SERVER_FILE_SPEC.md`        | 補足：接続情報ファイル仕様                     |
+| `091_EXTERNAL_API_SPEC.md`       | 補足：外部API仕様                              |
+| `092_ERROR_HANDLING.md`          | 補足：例外・エラーハンドリング要件             |
+
+## 備考（将来対応）
+
+- 将来対応1（ローカル大量出力時の停止リスク）：BashExecは終了待ちの後に標準出力を読み取るため、パイプが満杯になると子プロセスとJava側が相互待ちになる可能性がある。現在の運用では許容し、今回の変更では未解消とする。
+- 将来対応2（SSH標準出力の逐次ログ化）：SshExecは標準出力を配列に蓄積し、コマンド終了後にSshCommandからAplLogへ渡す。実行中の進捗は記録しない現行仕様を許容し、将来対応1とあわせて見直す。
+- 上記2件は解消済みではなく、明示的に保留した事項である。

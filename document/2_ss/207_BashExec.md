@@ -8,15 +8,23 @@
 | ファイル名       | `BashExec.java`                                                                                                   |
 | 種別             | class（public）                                                                                                   |
 | 責務             | Java の `ProcessBuilder` を使用してローカルサーバ（自サーバ）上でBashコマンドを実行する。標準出力をログに記録する |
-| 依存クラス       | `Main`, `WksConstants`                                                                                            |
+| 依存クラス       | `AplLog`、`WksConstants`                                                                                          |
 
 ---
 
 ## フィールド一覧
 
-| フィールド名 | 型             | 修飾子                 | 初期値     | 説明                                                                      |
-|--------------|----------------|------------------------|------------|---------------------------------------------------------------------------|
-| `log`        | `List<String>` | `private static final` | `Main.log` | `Main.log` への参照。実行コマンドと標準出力をログに追記するために使用する |
+なし。ログはAplLogを通して追加する。
+
+---
+
+## ログ出力制御
+
+| 呼び出し元              | outLogFlag | ログ                                           |
+|-------------------------|------------|------------------------------------------------|
+| update / upgrade        | true       | 終了後にlocalhostのCMD、標準出力各行のOUT      |
+| waitOneMin / getNowTime | false      | コマンド・結果を記録しない。待機・戻り値は維持 |
+| shutdown                | 対象外     | バックグラウンド起動後にlocalhostのCMDのみ     |
 
 ---
 
@@ -41,7 +49,7 @@
 public static void update() throws IOException, InterruptedException;
 ```
 
-`runCommand(WksConstants.CMD_UPDATE)` を呼び出す単純なラッパー。
+`runCommand(WksConstants.CMD_UPDATE, true)` を呼び出す単純なラッパー。
 
 ---
 
@@ -51,7 +59,7 @@ public static void update() throws IOException, InterruptedException;
 public static void upgrade() throws IOException, InterruptedException;
 ```
 
-`runCommand(WksConstants.CMD_UPGRADE)` を呼び出す単純なラッパー。
+`runCommand(WksConstants.CMD_UPGRADE, true)` を呼び出す単純なラッパー。
 
 ---
 
@@ -74,7 +82,7 @@ public static void shutdown() throws IOException;
 2. cmd[] = {"sh", "-c", shutdownCmd}
 3. new ProcessBuilder(cmd)
 4. processBuilder.start()  ← waitFor() を呼ばない（バックグラウンド）
-5. log に "$ {shutdownCmd}" を追記
+5. AplLog.outCommandLog(localhost, shutdownCmd)でCMDを追加
 ```
 
 #### 例外
@@ -102,7 +110,7 @@ public static void shutdown() throws IOException;
 public static void waitOneMin() throws IOException, InterruptedException;
 ```
 
-`runCommand(CMD_WAIT_ONE_MIN)` を呼び、管理端末の `sleep 60` を同期待機する。
+`runCommand(CMD_WAIT_ONE_MIN, false)` を呼び、管理端末の `sleep 60` を同期待機する。
 両サービス停止後に1回、全台への再起動指示後に1回利用する。接続先でのsleepは行わない。
 
 ### `getNowTime()`
@@ -111,16 +119,16 @@ public static void waitOneMin() throws IOException, InterruptedException;
 public static long getNowTime() throws IOException, InterruptedException;
 ```
 
-`runCommand(CMD_GET_TIME)` の先頭行を `Long.parseLong` で変換して返す。
+`runCommand(CMD_GET_TIME, false)` の先頭行を `Long.parseLong` で変換して返す。
 コマンドは `date '+%s'` で、単位は秒。復帰待ちの開始時刻と現在時刻に使用する。
 先頭行の存在と整数形式を前提とし、不正値なら非検査例外がMainへ伝播する。
 
 ---
 
-### `runCommand(String cmd)` ※private
+### `runCommand(String cmd, boolean outLogFlag)` ※private
 
 ```java
-private static String[] runCommand(String cmd) throws IOException, InterruptedException;
+private static String[] runCommand(String cmd, boolean outLogFlag) throws IOException, InterruptedException;
 ```
 
 #### 概要
@@ -140,13 +148,13 @@ private static String[] runCommand(String cmd) throws IOException, InterruptedEx
 5. BufferedReader(inputStreamReader) → bufferedReader
 
 [ログ書き込み]
-6. log に "$ {cmd}" を追記
+6. outLogFlagがtrueならAplLogへlocalhostのCMDを追加
 
 [出力の行読み取りループ]
 7. loop:
      line = bufferedReader.readLine()
      if (line == null): break
-     log.add(line)
+     outLogFlagがtrueならAplLogへlocalhostのOUTを追加
      retList.add(line)
 
 [クローズ]
@@ -157,9 +165,10 @@ private static String[] runCommand(String cmd) throws IOException, InterruptedEx
 
 #### 引数
 
-| 引数名 | 型       | 説明                       |
-|--------|----------|----------------------------|
-| `cmd`  | `String` | 実行するBashコマンド文字列 |
+| 引数名       | 型        | 説明                                                           |
+|--------------|-----------|----------------------------------------------------------------|
+| `cmd`        | `String`  | 実行するBashコマンド文字列                                     |
+| `outLogFlag` | `boolean` | trueならlocalhostのCMD・OUTをAplLogへ追加、falseなら記録しない |
 
 #### 例外
 
@@ -172,10 +181,12 @@ private static String[] runCommand(String cmd) throws IOException, InterruptedEx
 
 ## 設計上の注意点
 
+- ログはAplLog.getInstance()へ渡す。日時・サーバIP・ログレベルは受付時に付与され、専用スレッドが随時ファイルへ出力する。
+- サーバごとの複数行を一括排他しないため、並列更新中は行が混在する。
+
+
 - 並列更新中はSSH実行前の時刻取得 `getNowTime()` も各更新スレッドから呼ばれる。各呼び出しのプロセス・出力収集リストはローカルであり、ログのみを共有する。自端末のOS更新は最後に直列実行する。
 
-- 共有ログの宣言型は `List<String>`、実体は `Main` が生成する `CopyOnWriteArrayList<String>` とする。各クラスは同一インスタンスを参照する。
-- 並列更新中の `add`・`addAll` は安全に実行できるが、コマンド行と標準出力を一体で排他しないため、サーバ間のログは混在する。サーバ別の順序・まとまりは保証しない。
 
 - `runCommand` では `process.waitFor()` の後に `getInputStream()`
   で出力を読み取っている。プロセス完了後に読み取るため、出力バッファがオーバーフローするほど大量の出力がある場合にデッドロックのリスクがある（
@@ -184,6 +195,12 @@ private static String[] runCommand(String cmd) throws IOException, InterruptedEx
 - `shutdown()` は `InterruptedException` を `throws` しないが、`update()`・`upgrade()` は `throws InterruptedException`
   を宣言している点に注意。
 
-- `runCommand` の戻り値は標準出力の行配列（空出力は長さ0）。実行コマンドと各行は従来どおりログにも記録する。
+- `runCommand` の戻り値は標準出力の行配列（空出力は長さ0）。outLogFlagがtrueの場合のみコマンドと各行をAplLogへ渡す。
 - `waitOneMin`・`getNowTime` のプロセス起動・読み取り失敗は `IOException`、完了待ち割り込みは `InterruptedException`
   として上位へ伝播する。
+
+## 備考（将来対応）
+
+- 将来対応1（ローカル大量出力時の停止リスク）：BashExecは終了待ちの後に標準出力を読み取るため、パイプが満杯になると子プロセスとJava側が相互待ちになる可能性がある。現在の運用では許容し、今回の変更では未解消とする。
+- 将来対応2（SSH標準出力の逐次ログ化）：SshExecは標準出力を配列に蓄積し、コマンド終了後にSshCommandからAplLogへ渡す。実行中の進捗は記録しない現行仕様を許容し、将来対応1とあわせて見直す。
+- 上記2件は解消済みではなく、明示的に保留した事項である。
